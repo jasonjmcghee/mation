@@ -1,0 +1,130 @@
+body {
+  margin: 0;
+  background: #181818;
+}
+
+/* Animation controls */
+.animation-controls {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  background: rgba(34, 34, 34, 0.7);
+  padding: 10px;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 500px;
+  z-index: 10;
+}
+
+.play-pause-button {
+  background: #333;
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.play-pause-button:hover {
+  background: #444;
+}
+
+.scrubber-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.time-display {
+  color: white;
+  font-size: 12px;
+  margin-bottom: 5px;
+  font-family: monospace;
+}
+
+.scrubber {
+  width: 100%;
+  cursor: pointer;
+  height: 10px;
+  -webkit-appearance: none;
+  background: #333;
+  border-radius: 5px;
+  outline: none;
+}
+
+.scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #3498db;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.scrubber::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #3498db;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Render button and progress */
+.render-button {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.render-button:hover {
+  background-color: #2980b9;
+}
+
+.render-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+.progress-container {
+  position: absolute;
+  bottom: 70px;
+  right: 20px;
+  width: 200px;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.progress-container.visible {
+  opacity: 1;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #3498db;
+  transition: width 0.1s linear;
+}

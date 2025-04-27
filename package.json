@@ -1,10 +1,20 @@
 {
-  "name": "${PROJECT_NAME}",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "mation",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "private": true
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "polymorph-js": "1.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.2",
+    "vite": "^4.4.0"
+  }
 }
