@@ -4,8 +4,7 @@ precision highp int;
 `;
 
 // Vertex Shader (shared by both passes)
-const vertexShaderDefault = `${prefix}
-in vec2 position;
+const vertexShaderDefault = `in vec2 position;
 out vec2 vUv;
 void main() {
     vUv = 0.5 * (position + 1.0);
@@ -76,7 +75,7 @@ class Pass {
     this.vertexShader = vertexShader ?? vertexShaderDefault;
     this.fragmentShader = fragmentShader;
     this.program = w.createProgram(
-      this.vertexShader,
+      `${prefix}${this.vertexShader}`,
       `${prefix}${this.fragmentShader}`
     );
     this.uniforms = uniforms;
@@ -444,7 +443,7 @@ export class WebGL2MicroLayer {
   }
 
   clear(): void {
-    // this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
   }
 
@@ -614,6 +613,21 @@ export class WebGL2MicroLayer {
     const fullscreenQuad = this.createFullscreenQuad();
 
     return new WebGLPipeline(this, fullscreenQuad);
+  }
+
+  cleanup() {
+    this.clear();
+
+    // Delete any render targets with this layer's name
+    // Object.values(this.renderTargets).forEach(rt => {
+    //   const texture = rt.texture;
+    //   this.gl.deleteTexture(texture);
+    // });
+
+    // Array.from(this.framebuffers.entries()).forEach(([key, framebuffer]) => {
+    //   this.gl.deleteFramebuffer(framebuffer);
+    //   this.framebuffers.delete(key);
+    // });
   }
 }
 

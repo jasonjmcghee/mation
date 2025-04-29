@@ -1,5 +1,5 @@
 import {Scene} from "./animation.ts";
-import {renderToVideo} from "./videoRenderer.ts";
+import {renderToVideo, OutputFormat, getAvailableFormats} from "./videoRenderer.ts";
 
 export default class Mation {
   scene?: Scene;
@@ -7,6 +7,10 @@ export default class Mation {
   private scrubber: HTMLInputElement | null = null;
   private timeDisplay: HTMLElement | null = null;
   private renderButton: HTMLButtonElement | null = null;
+  private renderDropdown: HTMLDivElement | null = null;
+  private renderOptions: HTMLDivElement | null = null;
+  private dropdownToggle: HTMLButtonElement | null = null;
+  private selectedFormat: OutputFormat = 'mp4';
   private progressContainer: HTMLElement | null = null;
   private progressBar: HTMLElement | null = null;
   private isPlaying = true;
@@ -18,6 +22,22 @@ export default class Mation {
 
   setScene(scene: Scene) {
     this.scene = scene;
+  }
+
+  setZoom(scene: Scene, zoom: number) {
+    scene.setZoom(zoom);
+  }
+
+  setPan(scene: Scene, pan: [number, number]) {
+    scene.setPan(pan);
+  }
+
+  getZoom(scene: Scene) {
+    return scene.zoom;
+  }
+
+  getPan(scene: Scene) {
+    return scene.pan;
   }
 
   async initialize(container: Element) {
@@ -52,9 +72,9 @@ export default class Mation {
     
     // Expose for debugging
     (window as any).mation = this;
-    (window as any).render = async () => {
+    (window as any).render = async (format: OutputFormat = 'mp4') => {
       if (this.scene) {
-        await renderToVideo(this.scene);
+        await renderToVideo(this.scene, { outputFormat: format });
       } else {
         console.error("No scene available to render");
       }
@@ -72,6 +92,13 @@ export default class Mation {
     this.playPauseButton.className = 'play-pause-button';
     this.playPauseButton.textContent = '⏸️';
     controlsContainer.appendChild(this.playPauseButton);
+    
+    // Reset Zoom button (positioned at bottom left, outside player controls)
+    const resetZoomButton = document.createElement('button');
+    resetZoomButton.className = 'reset-zoom-button';
+    resetZoomButton.textContent = '🔍';
+    resetZoomButton.title = 'Reset Zoom';
+    container.appendChild(resetZoomButton);
     
     // Scrubber/slider container
     const scrubberContainer = document.createElement('div');
@@ -93,11 +120,58 @@ export default class Mation {
     this.scrubber.className = 'scrubber';
     scrubberContainer.appendChild(this.scrubber);
     
+    // Create render dropdown container
+    this.renderDropdown = document.createElement('div');
+    this.renderDropdown.className = 'render-dropdown';
+    container.appendChild(this.renderDropdown);
+    
+    // Create button container (holds both buttons)
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'button-container';
+    this.renderDropdown.appendChild(buttonContainer);
+    
     // Create and add render button
     this.renderButton = document.createElement('button');
     this.renderButton.className = 'render-button';
-    this.renderButton.textContent = 'Render Video';
-    container.appendChild(this.renderButton);
+    this.renderButton.textContent = 'Render MP4';
+    buttonContainer.appendChild(this.renderButton);
+    
+    // Create dropdown toggle button
+    this.dropdownToggle = document.createElement('button');
+    this.dropdownToggle.className = 'dropdown-toggle';
+    this.dropdownToggle.innerHTML = '▼';
+    buttonContainer.appendChild(this.dropdownToggle);
+    
+    // Create render options dropdown
+    this.renderOptions = document.createElement('div');
+    this.renderOptions.className = 'render-options';
+    this.renderDropdown.appendChild(this.renderOptions);
+    
+    // Get available formats
+    const availableFormats = getAvailableFormats();
+    
+    // Add MP4 option
+    const mp4Option = document.createElement('div');
+    mp4Option.className = 'render-option selected';
+    mp4Option.textContent = 'MP4 Video';
+    mp4Option.dataset.format = 'mp4';
+    this.renderOptions.appendChild(mp4Option);
+    
+    // Add ZIP option
+    const zipOption = document.createElement('div');
+    zipOption.className = 'render-option';
+    zipOption.textContent = 'PNG Sequence (ZIP)';
+    zipOption.dataset.format = 'zip';
+    this.renderOptions.appendChild(zipOption);
+    
+    // Add Node MP4 option if available
+    if (availableFormats.includes('node_mp4')) {
+      const nodeOption = document.createElement('div');
+      nodeOption.className = 'render-option';
+      nodeOption.textContent = 'Server MP4 (faster)';
+      nodeOption.dataset.format = 'node_mp4';
+      this.renderOptions.appendChild(nodeOption);
+    }
     
     // Create progress container
     this.progressContainer = document.createElement('div');
@@ -132,6 +206,23 @@ export default class Mation {
       }
       this.isPlaying = !this.isPlaying;
     });
+    
+    // Reset zoom button handler
+    const resetZoomButton = document.querySelector('.reset-zoom-button');
+    resetZoomButton?.addEventListener('click', () => {
+      if (!this.scene) return;
+      
+      // Reset to center of canvas
+      const canvasWidth = this.scene.canvas.width;
+      const canvasHeight = this.scene.canvas.height;
+      this.scene.setMousePosition(canvasWidth / 2, canvasHeight / 2);
+      
+      // Reset zoom to 1.0
+      this.scene.setZoom(1.0);
+      
+      // Reset pan to [0, 0]
+      this.scene.setPan([0, 0]);
+    });
 
     // Scrubber handlers
     this.scrubber?.addEventListener('mousedown', () => {
@@ -154,6 +245,7 @@ export default class Mation {
       this.scene.setForceDefaultLayerOnly(true);
     });
 
+    // These must remain on document to catch events outside the canvas
     document.addEventListener('mouseup', () => {
       if (!this.scene) return;
       if (this.isDragging) {
@@ -161,7 +253,7 @@ export default class Mation {
         
         // Disable default layer only mode when done dragging
         this.scene.setForceDefaultLayerOnly(false);
-        
+
         if (this.wasPlayingBeforeDrag) {
           this.scene.play();
           this.isPlaying = true;
@@ -177,7 +269,7 @@ export default class Mation {
         
         // Disable default layer only mode when done dragging
         this.scene.setForceDefaultLayerOnly(false);
-        
+
         if (this.wasPlayingBeforeDrag) {
           this.scene.play();
           this.isPlaying = true;
@@ -194,10 +286,215 @@ export default class Mation {
       this.scene.seekToTime(targetTime);
       this.updateTimeDisplay(targetTime, duration);
     });
+    
+    // Track mouse position for zooming
+    this.scene?.canvas?.addEventListener('mousemove', (event) => {
+      if (!this.scene || !this.scene.canvas) return;
+      
+      // Get mouse position relative to canvas
+      const rect = this.scene.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
 
-    // Render button handling
+      // Update the mouse position in the scene
+      this.scene.setMousePosition(x, y);
+    });
+
+    // Zoom with mouse wheel
+    this.scene?.canvas?.addEventListener('wheel', (event) => {
+      if (!this.scene) return;
+
+      // Prevent default behavior to avoid page scrolling
+      event.preventDefault();
+
+      // Get mouse position relative to canvas
+      const rect = this.scene.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      // First, update the mouse position
+      this.scene.setMousePosition(x, y);
+
+      // Get current zoom
+      const currentZoom = this.scene.zoom;
+
+      // Calculate new zoom based on wheel direction
+      let newZoom;
+      if (event.deltaY > 0) {
+        // Zoom out - use smaller steps for smoother experience
+        newZoom = Math.max(0.05, currentZoom / 1.1);
+      } else {
+        // Zoom in - use smaller steps for smoother experience
+        newZoom = Math.min(10, currentZoom * 1.1);
+      }
+
+      // Apply the new zoom
+      this.scene.setZoom(newZoom);
+    }, { passive: false });
+    
+    // Pan with Alt + mouse drag
+    let isPanning = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    this.scene?.canvas?.addEventListener('mousedown', (event) => {
+      if (!this.scene) return;
+
+      // Only start panning if Alt key is pressed
+      if (event.altKey) {
+        isPanning = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
+    });
+
+    this.scene?.canvas?.addEventListener('mousemove', (event) => {
+      if (!this.scene || !isPanning) return;
+      
+      const deltaX = event.clientX - lastX;
+      const deltaY = event.clientY - lastY;
+      
+      // Update pan values
+      const [currentX, currentY] = this.scene.pan;
+      this.scene.setPan([currentX + deltaX, currentY + deltaY]);
+
+      lastX = event.clientX;
+      lastY = event.clientY;
+    });
+    
+    this.scene?.canvas?.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+    
+    // Touch-based panning with two fingers
+    let touchStartDistance = 0;
+    let initialZoom = 1;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    this.scene?.canvas?.addEventListener('touchstart', (event) => {
+      if (!this.scene) return;
+      
+      if (event.touches.length === 2) {
+        // Two-finger gesture started - handle zoom and pan
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        
+        // Calculate distance between touches for zoom
+        touchStartDistance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        
+        initialZoom = this.scene.zoom;
+        
+        // Calculate midpoint for pan
+        touchStartX = (touch1.clientX + touch2.clientX) / 2;
+        touchStartY = (touch1.clientY + touch2.clientY) / 2;
+      }
+    });
+    
+    this.scene?.canvas?.addEventListener('touchmove', (event) => {
+      if (!this.scene) return;
+      
+      if (event.touches.length === 2) {
+        // Prevent default to avoid page gestures
+        event.preventDefault();
+        
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        
+        // Handle zoom - calculate new distance
+        const currentDistance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        
+        // Calculate midpoint for zoom center
+        const currentMidX = (touch1.clientX + touch2.clientX) / 2;
+        const currentMidY = (touch1.clientY + touch2.clientY) / 2;
+        
+        // Get canvas position
+        const rect = this.scene.canvas.getBoundingClientRect();
+        const canvasX = currentMidX - rect.left;
+        const canvasY = currentMidY - rect.top;
+        
+        // Update mouse position for zoom centering
+        this.scene.setMousePosition(canvasX, canvasY);
+        
+        // Calculate zoom ratio
+        const zoomDelta = currentDistance / touchStartDistance;
+        this.scene.setZoom(initialZoom * zoomDelta);
+        
+        // Handle pan - calculate midpoint movement
+        const deltaX = currentMidX - touchStartX;
+        const deltaY = currentMidY - touchStartY;
+        
+        const [startX, startY] = this.scene.pan;
+        this.scene.setPan([startX + deltaX, startY + deltaY]);
+        
+        // Update start position for next move
+        touchStartX = currentMidX;
+        touchStartY = currentMidY;
+      }
+    }, { passive: false });
+
+    // Dropdown toggle button
+    this.dropdownToggle?.addEventListener('click', () => {
+      if (this.isRendering) return;
+      
+      if (this.renderOptions) {
+        this.renderOptions.classList.toggle('visible');
+      }
+    });
+    
+    // Render option selection
+    this.renderOptions?.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      if (target.classList.contains('render-option')) {
+        // Update selected format
+        const format = target.dataset.format as OutputFormat;
+        this.selectedFormat = format;
+        
+        // Update UI
+        const options = this.renderOptions?.querySelectorAll('.render-option');
+        options?.forEach(option => option.classList.remove('selected'));
+        target.classList.add('selected');
+        
+        // Update button text
+        if (this.renderButton) {
+          if (format === 'mp4') {
+            this.renderButton.textContent = 'Render MP4';
+          } else if (format === 'zip') {
+            this.renderButton.textContent = 'Render PNGs';
+          } else if (format === 'node_mp4') {
+            this.renderButton.textContent = 'Render Server MP4';
+          }
+        }
+        
+        // Hide dropdown
+        this.renderOptions?.classList.remove('visible');
+      }
+    });
+    
+    // Close dropdown when clicking elsewhere
+    document.addEventListener('click', (event) => {
+      if (this.renderOptions?.classList.contains('visible') && 
+          this.dropdownToggle && 
+          !(event.target === this.dropdownToggle || this.dropdownToggle.contains(event.target as Node)) &&
+          !(event.target === this.renderOptions || this.renderOptions.contains(event.target as Node))) {
+        this.renderOptions.classList.remove('visible');
+      }
+    });
+    
+    // Start rendering with main button
     this.renderButton?.addEventListener('click', async () => {
       if (!this.scene || this.isRendering || !this.renderButton || !this.progressContainer || !this.progressBar) return;
+
+      // Hide dropdown if visible
+      if (this.renderOptions?.classList.contains('visible')) {
+        this.renderOptions.classList.remove('visible');
+      }
 
       this.isRendering = true;
       this.renderButton.disabled = true;
@@ -209,14 +506,21 @@ export default class Mation {
         await renderToVideo(this.scene, {
           onProgress: (progress) => {
             if (this.progressBar) this.progressBar.style.width = `${progress * 100}%`;
-          }
+          },
+          outputFormat: this.selectedFormat
         });
 
         // Success
         if (this.renderButton) this.renderButton.textContent = 'Render Complete!';
         setTimeout(() => {
           if (this.renderButton) {
-            this.renderButton.textContent = 'Render Video';
+            if (this.selectedFormat === 'mp4') {
+              this.renderButton.textContent = 'Render MP4';
+            } else if (this.selectedFormat === 'zip') {
+              this.renderButton.textContent = 'Render PNGs';
+            } else if (this.selectedFormat === 'node_mp4') {
+              this.renderButton.textContent = 'Render Server MP4';
+            }
             this.renderButton.disabled = false;
           }
           if (this.progressContainer) this.progressContainer.classList.remove('visible');
@@ -226,7 +530,13 @@ export default class Mation {
         if (this.renderButton) this.renderButton.textContent = 'Render Failed';
         setTimeout(() => {
           if (this.renderButton) {
-            this.renderButton.textContent = 'Render Video';
+            if (this.selectedFormat === 'mp4') {
+              this.renderButton.textContent = 'Render MP4';
+            } else if (this.selectedFormat === 'zip') {
+              this.renderButton.textContent = 'Render PNGs';
+            } else if (this.selectedFormat === 'node_mp4') {
+              this.renderButton.textContent = 'Render Server MP4';
+            }
             this.renderButton.disabled = false;
           }
           if (this.progressContainer) this.progressContainer.classList.remove('visible');

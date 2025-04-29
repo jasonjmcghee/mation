@@ -4,10 +4,6 @@ import {Easing} from "../easings.ts";
 import {buildWebGlPipeline} from "../webgl.ts";
 import { curvePath } from "../assets/firstSceneAssets.ts";
 
-let container = {
-  sunAngle: 0.0,
-};
-
 const polygonLayerShader = {
   fragmentShader: `in vec2 vUv;
 out vec4 fragColor;
@@ -27,8 +23,6 @@ void main() {
 };
 
 export class FirstScene extends Scene {
-  private passes: number = 0;
-
   setupLayers() {
     // Create curve layer with its own pipeline
     const curvePipeline = buildWebGlPipeline(this.canvas);
@@ -57,7 +51,7 @@ export class FirstScene extends Scene {
       type: curvePipeline.gl().FLOAT,
     });
 
-    this.passes = Math.ceil(Math.log2(Math.max(this.width, this.height))) + 1;
+    const passes = Math.ceil(Math.log2(Math.max(this.width, this.height))) + 1;
     const {
       render: jfaRender, renderTargets: jfaRenderTargets, uniforms: jfaUniforms,
     } = curvePipeline.add({
@@ -135,9 +129,9 @@ void main() {
         inputTexture: null,
         resolution: [this.width, this.height],
         oneOverSize: [1.0 / this.width, 1.0 / this.height],
-        uOffset: Math.pow(2, this.passes - 1),
+        uOffset: Math.pow(2, passes - 1),
         direction: 0,
-        passes: this.passes,
+        passes: passes,
         skip: true,
       }
     }, {
@@ -169,19 +163,18 @@ void main() {
         }`,
     });
 
-    const {render: giRender} = curvePipeline.add({
+    const {uniforms: curveUniforms, render: giRender, renderTargets: giRenderTargets} = curvePipeline.add({
       uniforms: {
         resolution: [this.width, this.height],
         oneOverSize: [1.0 / this.width, 1.0 / this.height],
         sceneTexture: null,
         distanceTexture: null,
-        rayCount: 32,
+        rayCount: 16,
         maxSteps: 80,
         sunAngle: 0.4,
-        enableSun: true,
+        enableSun: false,
         showGrain: false,
         showNoise: true,
-        srgb: true ? 2.2 : 1.0,
       },
       fragmentShader: `
 uniform int rayCount;
@@ -292,78 +285,160 @@ void main() {
     }, {
       // magFilter: curvePipeline.gl().LINEAR,
       // minFilter: curvePipeline.gl().LINEAR,
-      // internalFormat: curvePipeline.gl().RGBA16F,
+      internalFormat: curvePipeline.gl().RGBA16F,
     });
 
-    const curveLayer: Layer = {
-      name: 'curve-layer',
-      render: (texture, _: number) => {
-        seedRender({
-          renderTarget: seedRenderTargets[0],
-          uniforms: { surfaceTexture: texture }
+    const { render: debandingRender } = curvePipeline.add({
+      fragmentShader: `
+// This shader reduces color banding by adding controlled noise to smooth gradients
+
+uniform sampler2D inputTexture;
+uniform float noiseAmount;
+uniform float ditherRange; // Range of colors to analyze for banding
+uniform vec2 resolution;
+
+in vec2 vUv;
+out vec4 FragColor;
+
+float random(vec2 coords) {
+    return fract(sin(dot(coords.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = vUv;
+    
+    // Sample the original color
+    vec4 originalColor = texture(inputTexture, uv);
+    
+    // Generate controlled noise based on position
+    // This helps break up banding patterns
+    vec3 noise = vec3(
+        random(uv + 0.07 * fract(vec2(1.0, 0.0))),
+        random(uv + 0.07 * fract(vec2(0.0, 1.0))),
+        random(uv + 0.07 * fract(vec2(1.0, 1.0)))
+    );
+    
+    // Remap noise from [0,1] to [-0.5,0.5]
+    noise = noise - 0.5;
+    
+    // Apply noise only to smooth gradients
+    // First, sample neighboring pixels to detect gradients
+    vec4 neighbors[4];
+    neighbors[0] = texture(inputTexture, uv + vec2(1.0, 0.0) / resolution);
+    neighbors[1] = texture(inputTexture, uv + vec2(-1.0, 0.0) / resolution);
+    neighbors[2] = texture(inputTexture, uv + vec2(0.0, 1.0) / resolution);
+    neighbors[3] = texture(inputTexture, uv + vec2(0.0, -1.0) / resolution);
+    
+    // Calculate color differences
+    float colorDifference = 0.0;
+    for (int i = 0; i < 4; i++) {
+        colorDifference += distance(originalColor.rgb, neighbors[i].rgb);
+    }
+    colorDifference /= 4.0;
+    
+    // Apply more noise to areas with subtle gradient changes (where banding occurs)
+    // and less noise to areas with sharp changes or flat colors
+    float bandingDetection = 1.0 - smoothstep(0.0, ditherRange, colorDifference);
+    
+    // Apply the noise with intensity control
+    vec3 finalColor = originalColor.rgb + noise * noiseAmount * bandingDetection;
+    
+    // Output the processed color
+    FragColor = vec4(finalColor, originalColor.a);
+}`,
+      uniforms: {
+        inputTexture: null,
+        noiseAmount: 0.015,
+        ditherRange: 1.0,
+        resolution: [this.width, this.height],
+      }
+    })
+
+    const curveLayer = new Layer(
+      'curve-layer',
+      curvePipeline,
+      (texture, _: number) => {
+      seedRender({
+        renderTarget: seedRenderTargets[0],
+        uniforms: { surfaceTexture: texture }
+      });
+
+      let currentInput = seedRenderTargets[0].texture;
+
+      let [renderA, renderB] = jfaRenderTargets;
+      let currentOutput = renderA;
+      let passes = jfaUniforms.passes;
+
+      for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
+        const offset = Math.pow(2, passes - i - 1);
+
+        jfaRender({
+          renderTarget: currentOutput,
+          uniforms: {
+            skip: passes === 0,
+            inputTexture: currentInput,
+            // This intentionally uses `this.passes` which is the true value
+            // In order to properly show stages using the JFA slider.
+            uOffset: offset,
+            direction: 0,
+          },
         });
 
-        let currentInput = seedRenderTargets[0].texture;
+        currentInput = currentOutput.texture;
+        currentOutput = (currentOutput === renderA) ? renderB : renderA;
+      }
 
-        let [renderA, renderB] = jfaRenderTargets;
-        let currentOutput = renderA;
-        let passes = jfaUniforms.passes;
-
-        for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
-          const offset = Math.pow(2, passes - i - 1);
-
-          jfaRender({
-            renderTarget: currentOutput,
-            uniforms: {
-              skip: passes === 0,
-              inputTexture: currentInput,
-              // This intentionally uses `this.passes` which is the true value
-              // In order to properly show stages using the JFA slider.
-              uOffset: offset,
-              direction: 0,
-            },
-          });
-
-          currentInput = currentOutput.texture;
-          currentOutput = (currentOutput === renderA) ? renderB : renderA;
+      dfRender({
+        renderTarget: dfRenderTargets[0],
+        uniforms: {
+          jfaTexture: currentOutput.texture,
+          surfaceTexture: texture,
         }
+      });
 
-        dfRender({
-          renderTarget: dfRenderTargets[0],
-          uniforms: {
-            jfaTexture: currentOutput.texture,
-            surfaceTexture: texture,
-          }
-        });
+      giRender({
+        renderTarget: giRenderTargets[0],
+        uniforms: {
+          distanceTexture: dfRenderTargets[0].texture,
+          sceneTexture: texture,
+        }
+      });
 
-        giRender({
-          uniforms: {
-            distanceTexture: dfRenderTargets[0].texture,
-            sceneTexture: texture,
-            sunAngle: container.sunAngle,
-          }
-        });
+      debandingRender({
+        uniforms: {
+          inputTexture: giRenderTargets[0].texture,
+        }
+      })
+    },
+      {
+        ignorePanZoom: true,
+      extras: {
+        uniforms: curveUniforms,
       },
-    };
+    });
 
-    const seedLayer: Layer = {
-      name: 'seed-layer',
-      render: (texture, _: number) => {
+    const seedLayer = new Layer(
+      'seed-layer',
+      curvePipeline,
+      (texture, _: number) => {
         seedRender({
           uniforms: { surfaceTexture: texture }
         });
       },
-      x: this.width * 0.25,
-      y: this.height * 0.125,
-      width: this.width * 0.125,
-      height: this.height * 0.75,
-      isSubview: true,
-      renderWhenScrubbing: true,
-    };
+      {
+        x: this.width * 0.125,
+        y: this.height * 0.125,
+        width: this.width * 0.125,
+        height: this.height * 0.75,
+        isSubview: true,
+        renderWhenScrubbing: true,
+      }
+    );
 
-    const jfaLayer: Layer = {
-      name: 'jfa-layer',
-      render: (texture, _: number) => {
+    const jfaLayer = new Layer(
+      'jfa-layer',
+      curvePipeline,
+      (texture, _: number) => {
         seedRender({
           renderTarget: seedRenderTargets[0],
           uniforms: { surfaceTexture: texture }
@@ -396,17 +471,20 @@ void main() {
 
         jfaRender();
       },
-      x: this.width * 0.25,
-      y: this.height * 0.125,
-      width: this.width * 0.125,
-      height: this.height * 0.75,
-      isSubview: true,
-      renderWhenScrubbing: true,
-    };
+      {
+        x: this.width * 0.25,
+        y: this.height * 0.125,
+        width: this.width * 0.125,
+        height: this.height * 0.75,
+        isSubview: true,
+        renderWhenScrubbing: true,
+      }
+    );
 
-    const dfLayer: Layer = {
-      name: 'df-layer',
-      render: (texture, _: number) => {
+    const dfLayer = new Layer(
+      'df-layer',
+      curvePipeline,
+      (texture, _: number) => {
         seedRender({
           renderTarget: seedRenderTargets[0],
           uniforms: { surfaceTexture: texture }
@@ -444,20 +522,23 @@ void main() {
           }
         });
       },
-      x: this.width * 0.25,
-      y: this.height * 0.125,
-      width: this.width * 0.125,
-      height: this.height * 0.75,
-      isSubview: true,
-      renderWhenScrubbing: true,
-    };
+      {
+        x: this.width * 0.25,
+        y: this.height * 0.125,
+        width: this.width * 0.125,
+        height: this.height * 0.75,
+        isSubview: true,
+        renderWhenScrubbing: true,
+      }
+    );
 
     // Create polygon layer with its own pipeline
     const polygonPipeline = buildWebGlPipeline(this.canvas);
     const polygonPipelineResult = polygonPipeline.add(polygonLayerShader);
-    const polygonLayer: Layer = {
-      name: 'polygon-layer',
-      render: (texture, progress: number) => {
+    const polygonLayer = new Layer(
+      'polygon-layer',
+      polygonPipeline,
+      (texture, progress: number) => {
         polygonPipelineResult.render({
           uniforms: {
             u_texture: texture,
@@ -465,18 +546,19 @@ void main() {
           }
         });
       },
-    };
+      {}
+    );
 
     this.pushLayer(curveLayer);
-    this.pushLayer(seedLayer);
     this.pushLayer(jfaLayer);
     this.pushLayer(dfLayer);
+    this.pushLayer(seedLayer);
     this.pushLayer(polygonLayer);
   }
   *animationSequence(): Generator<Promise<void>, void, unknown> {
     const { width, height } = this.canvas;
 
-    yield this.animate([
+    this.animate([
       {
         // Path
         layer: 'background',
@@ -491,14 +573,22 @@ void main() {
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
 
-    yield this.animate([
+    const polygonPath = `M ${width * 0.5} ${height * 0.6}
+                         L ${width * 0.5} ${height * 0.8}
+                         L ${width * 0.9} ${height * 0.9}
+                         L ${width * 0.5} ${height * 0.9}Z`;
+
+    this.animate([
       {
         // Path
         layer: ['curve-layer', 'seed-layer', 'jfa-layer', 'df-layer'],
-        draw(ctx: OffscreenCanvasRenderingContext2D, progress: number, extras) {
-          extras.layers['seed-layer'].x = width * 0.125 + progress * width * 0.25;
-          extras.layers['jfa-layer'].x = width * 0.25 + progress * width * 0.25;
-          extras.layers['df-layer'].x = width * 0.375 + progress * width * 0.25;
+        draw(ctx: OffscreenCanvasRenderingContext2D, progress: number, { layers }) {
+          if (layers['curve-layer'].extras) {
+            layers['curve-layer'].extras.uniforms.enableSun = false;
+          }
+          layers['seed-layer'].x = width * 0.125 + progress * width * 0.25;
+          layers['jfa-layer'].x = width * 0.25 + progress * width * 0.25;
+          layers['df-layer'].x = width * 0.375 + progress * width * 0.25;
 
           // --- Translate the origin to the canvas center ---
           ctx.save();
@@ -519,22 +609,29 @@ void main() {
           ctx.lineJoin = 'round';
           ctx.stroke(curvePath2D);
           ctx.restore();
+
+
+          const polygonPath2D = new Path2D(polygonPath);
+          ctx.fillStyle = '#000000';
+          ctx.fill(polygonPath2D);
+          ctx.fillStyle = '#000000';
+          ctx.font = "96px serif";
+          ctx.fillText("Hello", width * 0.65, height * 0.25);
         }
       },
-    ], { duration: 2.0, easing: Easing.easeInOutCubic, delay: 0.0 });
+    ], { duration: 5.0, easing: Easing.easeInOutCubic, delay: 0.0 });
 
-    yield this.animate([
+    this.animate([
       {
         // Path
         layer: 'curve-layer',
         draw(_: OffscreenCanvasRenderingContext2D, progress: number, extras) {
-          container.sunAngle = progress * 2.0 * 3.14;
           extras.layers['seed-layer'].height = progress === 0 ? (height * 0.75) : (1.0 - progress) * (height * 0.75);
-          
+
           // Collapse jfa layer toward the center
           extras.layers['jfa-layer'].height = progress === 0 ? (height * 0.75) : (1.0 - progress) * (height * 0.75);
           extras.layers['jfa-layer'].y = progress === 0 ? height * 0.125 : height * 0.5 - ((1.0 - progress) * (height * 0.75)) / 2;
-          
+
           // Collapse df layer from top
           const originalHeight = height * 0.75;
           const newHeight = progress === 0 ? originalHeight : (1.0 - progress) * originalHeight;
@@ -542,29 +639,47 @@ void main() {
           extras.layers['df-layer'].y = height * 0.125 + (originalHeight - newHeight);
         }
       }
-    ], { duration: 1.0, easing: Easing.easeInOutCubic });
+    ], { duration: 1.0, easing: Easing.easeInOutCubic, parallel: true });
 
-    // const polygonPath = `M ${this.canvas.width * 0.2} ${this.canvas.height * 0.6}
-    //                      L ${this.canvas.width * 0.4} ${this.canvas.height * 0.8}
-    //                      L ${this.canvas.width * 0.6} ${this.canvas.height * 0.7}
-    //                      L ${this.canvas.width * 0.4} ${this.canvas.height * 0.5}
-    //                      Z`;
-    //
-    // yield this.animate([
-    //   {
-    //     // Polygon
-    //     layer: 'polygon-layer',
-    //     draw(ctx: OffscreenCanvasRenderingContext2D, progress: number) {
-    //       const polygonPath2D = new Path2D(polygonPath);
-    //       const r = Math.floor(231 * progress);
-    //       const g = Math.floor(76 * progress);
-    //       const b = Math.floor(60 * progress);
-    //       const a = progress;
-    //
-    //       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-    //       ctx.fill(polygonPath2D);
-    //     }
-    //   }
-    // ], { duration: 0.3, easing: Easing.easeInOutCubic, delay: 0.0 });
+    this.animate([
+      {
+        layer: 'curve-layer',
+        draw(_1: OffscreenCanvasRenderingContext2D, _2: number, { layers }) {
+          if (layers['curve-layer'].extras) {
+            layers['curve-layer'].extras.uniforms.sunAngle = 0;
+            layers['curve-layer'].extras.uniforms.enableSun = true;
+          }
+        }
+      }
+    ], { duration: 0.0, easing: Easing.easeInOutCubic, delay: 0.5, parallel: true });
+
+    this.animate([
+      {
+        layer: 'curve-layer',
+        draw(_: OffscreenCanvasRenderingContext2D, progress: number, { layers }) {
+          if (layers['curve-layer'].extras) {
+            layers['curve-layer'].extras.uniforms.sunAngle = progress * 2.0 * 3.14;
+          }
+        }
+      }
+    ], { duration: 1.0, easing: Easing.easeInOutCubic, delay: 0.5 });
+
+
+    this.animate([
+      {
+        // Polygon
+        layer: 'polygon-layer',
+        draw(ctx: OffscreenCanvasRenderingContext2D, progress: number) {
+          const polygonPath2D = new Path2D(polygonPath);
+          const r = Math.floor(231 * progress);
+          const g = Math.floor(76 * progress);
+          const b = Math.floor(60 * progress);
+          const a = progress;
+
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+          ctx.fill(polygonPath2D);
+        }
+      }
+    ], { duration: 0.3, easing: Easing.easeInOutCubic, delay: 0.0 });
   }
 }

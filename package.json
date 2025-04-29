@@ -6,15 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "render": "node cli.cjs render",
+    "start-server": "node server.js",
+    "build-server": "node build-server.js"
+  },
+  "bin": {
+    "mation": "./cli.cjs"
   },
   "dependencies": {
-    "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/ffmpeg": "^0.12.15",
     "polymorph-js": "1.0.2"
   },
   "devDependencies": {
     "typescript": "^5.0.2",
-    "vite": "^4.4.0"
+    "vite": "^4.4.0",
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "rimraf": "^5.0.5",
+    "esbuild": "^0.20.0"
   }
 }

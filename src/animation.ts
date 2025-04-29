@@ -1,11 +1,12 @@
 // Animation primitives
 import {EasingFunction} from "./easings.ts";
-import {buildWebGlPipeline, WebGLInitResult} from "./webgl.ts";
+import {buildWebGlPipeline, WebGLInitResult, WebGLPipeline} from "./webgl.ts";
 
 interface AnimationOptions {
   duration: number;
   easing?: EasingFunction;
   delay?: number;
+  parallel?: boolean;
 }
 
 export interface DrawableElement {
@@ -15,15 +16,50 @@ export interface DrawableElement {
   segmentStartTime?: number; // Track when element was added
 }
 
-export interface Layer {
-  name: string;
+export class Layer {
+  public name: string;
+  public x?: number;
+  public y?: number;
+  public width?: number;
+  public height?: number;
+  public isSubview?: boolean;
+  public renderWhenScrubbing?: boolean;
+  public extras?: Record<string, any>;
+  private pipeline: WebGLPipeline;
+  public ignorePanZoom?: boolean;
   render: (texture: WebGLTexture, progress: number) => void;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  isSubview?: boolean;
-  renderWhenScrubbing?: boolean;
+
+  constructor(
+    name: string, 
+    pipeline: WebGLPipeline,
+    render: (texture: WebGLTexture, progress: number) => void,
+    options: {
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      isSubview?: boolean;
+      renderWhenScrubbing?: boolean;
+      ignorePanZoom?: boolean;
+      extras?: Record<string, any>;
+    } = {}
+  ) {
+    this.name = name;
+    this.pipeline = pipeline;
+    this.render = render;
+    this.x = options.x;
+    this.y = options.y;
+    this.width = options.width;
+    this.height = options.height;
+    this.isSubview = options.isSubview;
+    this.renderWhenScrubbing = options.renderWhenScrubbing;
+    this.ignorePanZoom = options.ignorePanZoom;
+    this.extras = options.extras;
+  }
+  
+  cleanup(): void {
+    this.pipeline.w.cleanup();
+  }
 }
 
 const defaultShader = {
@@ -53,6 +89,70 @@ export class Scene {
   ctx: OffscreenCanvasRenderingContext2D;
   width: number;
   height: number;
+  private _zoom: number = 1.0;
+  private _pan: [number, number] = [0.0, 0.0];
+  private mousePosition: [number, number] = [0, 0];
+  
+  get zoom(): number {
+    return this._zoom;
+  }
+  
+  set zoom(value: number) {
+    this._zoom = value;
+    this.savePlayerState();
+  }
+  
+  get pan(): [number, number] {
+    return this._pan;
+  }
+  
+  set pan(value: [number, number]) {
+    this._pan = value;
+    this.savePlayerState();
+  }
+  
+  setMousePosition(x: number, y: number): void {
+    this.mousePosition = [x * window.devicePixelRatio, y * window.devicePixelRatio];
+  }
+
+  // Add debug logging to setZoom to see what's happening
+  setZoom(value: number): void {
+    // Get mouse position in screen space
+    const [mouseX, mouseY] = this.mousePosition;
+
+    // Calculate the world coordinates of the mouse point
+    const worldX = (mouseX - this._pan[0]) / this._zoom;
+    const worldY = (mouseY - this._pan[1]) / this._zoom;
+
+    // Update the zoom level
+    this._zoom = value;
+
+    // Calculate new pan to keep the world point under the mouse cursor
+    const newPanX = mouseX - worldX * this._zoom;
+    const newPanY = mouseY - worldY * this._zoom;
+
+    // Update pan values
+    this._pan[0] = newPanX;
+    this._pan[1] = newPanY;
+
+    this.setForceDefaultLayerOnly(true);
+    // Re-render with updated transforms
+    this.clear();
+    // Also renders...
+    // this.renderAtTime(this.currentTime);
+    this.setForceDefaultLayerOnly(false);
+    this.savePlayerState();
+  }
+  
+  setPan(value: [number, number]): void {
+    this._pan = value;
+    this.setForceDefaultLayerOnly(true);
+    this.clear();
+    // Also renders...
+    // this.renderAtTime(this.currentTime);
+    this.setForceDefaultLayerOnly(false);
+    this.savePlayerState();
+  }
 
   private animationId: number | null = null;
   private texturePipelineResult: WebGLInitResult;
@@ -64,7 +164,7 @@ export class Scene {
   private defaultLayerElements: DrawableElement[] = [];
   private defaultLayerCanvas: OffscreenCanvas;
   private onFrame?: () => void;
-  
+
   // WebGL texture cache
   private textureCache: Record<string, WebGLTexture> = {};
   
@@ -124,7 +224,15 @@ export class Scene {
 
   insertLayer(index: number, layer: Layer): void {
     // Store initial layer properties as a separate object
-    this.layerInitialProperties[layer.name] = {...layer};
+    this.layerInitialProperties[layer.name] = {
+      x: layer.x,
+      y: layer.y,
+      width: layer.width,
+      height: layer.height,
+      isSubview: layer.isSubview,
+      renderWhenScrubbing: layer.renderWhenScrubbing,
+      extras: layer.extras ? {...layer.extras} : undefined
+    };
     
     this.layerLookup[layer.name] = layer;
     this.layers.splice(index, 0, layer);
@@ -136,14 +244,26 @@ export class Scene {
 
   pushLayer(layer: Layer): void {
     // Store initial layer properties as a separate object
-    this.layerInitialProperties[layer.name] = {...layer};
+    this.layerInitialProperties[layer.name] = {
+      x: layer.x,
+      y: layer.y,
+      width: layer.width,
+      height: layer.height,
+      isSubview: layer.isSubview,
+      renderWhenScrubbing: layer.renderWhenScrubbing,
+      extras: layer.extras ? {...layer.extras} : undefined
+    };
     
     this.layerLookup[layer.name] = layer;
     this.layers.push(layer);
     this.layerElements[layer.name] = [];
-    const width = this.canvas.width;
-    const height = this.canvas.height;
-    this.layerCanvases[layer.name] = new OffscreenCanvas(width, height);
+    this.layerCanvases[layer.name] = new OffscreenCanvas(
+      this.canvas.width, this.canvas.height
+    );
+  }
+
+  getLayer(layerName: string): Layer {
+    return this.layerLookup[layerName];
   }
 
   registerElement(element: DrawableElement): void {
@@ -169,12 +289,17 @@ export class Scene {
   }
 
   clear(): void {
-    this.texturePipelineResult.renderer.clear();
-    
+    this.texturePipelineResult.renderer.cleanup();
+    // Clean up any render targets from the pipeline that belong to this layer
+
+    this.layers.forEach((layer) => {
+      layer.cleanup();
+    });
+
     // Only clear canvases, not the element collections
     const defaultCtx = this.defaultLayerCanvas.getContext('2d')!;
     defaultCtx.clearRect(0, 0, this.defaultLayerCanvas.width, this.defaultLayerCanvas.height);
-    
+
     for (const layerName in this.layerCanvases) {
       const ctx = this.layerCanvases[layerName].getContext('2d')!;
       ctx.clearRect(0, 0, this.layerCanvases[layerName].width, this.layerCanvases[layerName].height);
@@ -207,9 +332,16 @@ export class Scene {
     this.clear();
     this.animationSegments = [];
     this.defaultLayerElements = [];
+    
+    // Clean up any layer-specific WebGL resources
     for (const layerName in this.layerElements) {
+      const layer = this.layerLookup[layerName];
+      if (layer) {
+        layer.cleanup();
+      }
       this.layerElements[layerName] = [];
     }
+    
     this.currentTime = 0;
     this.totalDuration = 0;
     
@@ -229,7 +361,9 @@ export class Scene {
     const state = {
       currentTime: this.currentTime,
       isPlaying: this.isPlaying,
-      totalDuration: this.totalDuration
+      totalDuration: this.totalDuration,
+      zoom: this._zoom,
+      pan: this._pan
     };
     try {
       localStorage.setItem(Scene.PLAYER_STATE_KEY, JSON.stringify(state));
@@ -259,6 +393,17 @@ export class Scene {
         if (state.currentTime !== undefined) {
           this.currentTime = state.currentTime;
           console.log(`Stored time for later restoration: ${this.currentTime}`);
+        }
+        
+        // Restore zoom and pan state
+        if (state.zoom !== undefined) {
+          this._zoom = state.zoom;
+          console.log(`Restored zoom: ${this._zoom}`);
+        }
+        
+        if (state.pan !== undefined) {
+          this._pan = state.pan;
+          console.log(`Restored pan: ${this._pan}`);
         }
       } else {
         console.log('No saved player state found');
@@ -459,7 +604,7 @@ export class Scene {
     // Clamp time to valid range
     const targetTime = Math.max(0, Math.min(time, this.totalDuration));
     this.currentTime = targetTime;
-    
+
     // Clear the canvas
     this.clear();
     
@@ -525,8 +670,11 @@ export class Scene {
   setForceDefaultLayerOnly(value: boolean): void {
     if (this.forceDefaultLayerOnly !== value) {
       this.forceDefaultLayerOnly = value;
-      // Re-render at current time to apply the change
-      this.renderAtTime(this.currentTime);
+
+      if (!this.forceDefaultLayerOnly) {
+        // Re-render at current time to apply the change
+        this.renderAtTime(this.currentTime);
+      }
     }
   }
   
@@ -535,40 +683,37 @@ export class Scene {
   }
 
   // Core animation method - now updated to work with the timeline
-  animate(elements: DrawableElement[], options: AnimationOptions): Promise<void> {
-    return new Promise<void>((resolve) => {
-      // Get current time and calculate segment timing
-      const startTime = this.currentTime;
-      const delay = options.delay || 0;
-      const segmentStartTime = startTime + delay;
-      const duration = options.duration;
-      
-      // Associate each element with this segment's start time
-      for (const element of elements) {
-        element.segmentStartTime = segmentStartTime;
-        this.registerElement(element);
-      }
-      
-      // Create a new animation segment and add it to our timeline
-      const segment: AnimationSegment = {
-        startTime: segmentStartTime,
-        duration: duration,
-        elements: [...elements],
-        easing: options.easing || ((t) => t) // Default to linear easing if not provided
-      };
-      
-      // Add this segment to our timeline
-      this.animationSegments.push(segment);
-      
-      // Update total duration
-      this.totalDuration = Math.max(this.totalDuration, segmentStartTime + duration);
-      
+  animate(elements: DrawableElement[], options: AnimationOptions) {
+    // Get current time and calculate segment timing
+    const startTime = this.currentTime;
+    const delay = options.delay || 0;
+    const segmentStartTime = startTime + delay;
+    const duration = options.duration;
+
+    // Associate each element with this segment's start time
+    for (const element of elements) {
+      element.segmentStartTime = segmentStartTime;
+      this.registerElement(element);
+    }
+
+    // Create a new animation segment and add it to our timeline
+    const segment: AnimationSegment = {
+      startTime: segmentStartTime,
+      duration: duration,
+      elements: [...elements],
+      easing: options.easing || ((t) => t) // Default to linear easing if not provided
+    };
+
+    // Add this segment to our timeline
+    this.animationSegments.push(segment);
+
+    // Update total duration
+    this.totalDuration = Math.max(this.totalDuration, segmentStartTime + duration);
+
+    if (!options?.parallel) {
       // Advance current time
       this.currentTime = segmentStartTime + duration;
-      
-      // Immediately resolve the promise
-      resolve();
-    });
+    }
   }
 
   // We don't need the startAnimation method any more as we're using the timeline-based approach
@@ -585,6 +730,9 @@ export class Scene {
     // First, render the default layer
     const defaultCtx = this.defaultLayerCanvas.getContext('2d')!;
     defaultCtx.clearRect(0, 0, this.defaultLayerCanvas.width, this.defaultLayerCanvas.height);
+    defaultCtx.save();
+    defaultCtx.translate(this.pan[0], this.pan[1]);
+    defaultCtx.scale(this.zoom, this.zoom);
 
     Object.keys(this.layerInitialProperties).forEach((layerName: string) => {
       // Restore initial properties before rendering if they were changed by an animation
@@ -639,8 +787,7 @@ export class Scene {
     // Make sure scissor test is disabled for the default layer
     const gl = this.texturePipelineResult.gl;
     gl.disable(gl.SCISSOR_TEST);
-    // gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    
+
     this.texturePipelineResult.render();
     
     // Now render each additional layer in order, but only if not forcing default layer only
@@ -649,22 +796,25 @@ export class Scene {
         const layerCanvas = this.layerCanvases[layer.name];
         const ctx = layerCanvas.getContext('2d')!;
         ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
-
-        // Save context state before applying transforms
         ctx.save();
+        const zoom = this.zoom;
+        const pan = this.pan;
 
         // Apply transformations based on whether this is a subview or not
-        const x = layer.x ?? 0;
-        const y = layer.y ?? 0;
-        const width = layer.width ?? this.canvas.width;
-        const height = layer.height ?? this.canvas.height;
+        const x = (layer.x ?? 0) * zoom + pan[0];
+        const y = (layer.y ?? 0) * zoom + pan[1];
+        const width = (layer.width ?? layerCanvas.width) * zoom;
+        const height = (layer.height ?? layerCanvas.height) * zoom;
 
         // For non-subview mode, also adjust the viewport to scale the full texture into the target area
         if (!layer.isSubview) {
-          const scaleX = width / layerCanvas.width;
-          const scaleY = height / layerCanvas.height;
+          const scaleX = width / (this.canvas.width);
+          const scaleY = height / (this.canvas.height);
           ctx.translate(x, y);
           ctx.scale(scaleX, scaleY);
+        } else {
+          ctx.translate(pan[0], pan[1]);
+          ctx.scale(zoom, zoom);
         }
 
         // Draw all elements assigned to this layer that should be visible
@@ -679,8 +829,6 @@ export class Scene {
           const elementProgress = progressMap.has(element) ? progressMap.get(element)! : 1.0;
           this.renderElement(element, ctx, elementProgress);
         }
-
-        // Restore context state after drawing
         ctx.restore();
 
         // Process with the layer's shader pipeline - use cached texture
@@ -693,12 +841,22 @@ export class Scene {
 
         // The scissor test is used regardless of mode to limit where rendering happens
         gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(
-          x,
-          this.canvas.height - y - height, // WebGL has origin at bottom left
-          width,
-          height
-        );
+
+        if (layer.ignorePanZoom) {
+          gl.scissor(
+            (layer.x ?? 0),
+            (layer.y ?? 0),
+            layer.width ?? layerCanvas.width,
+            layer.height ?? layerCanvas.height,
+          )
+        } else {
+          gl.scissor(
+            x,
+            this.canvas.height - y - height, // WebGL has origin at bottom left
+            width,
+            height
+          );
+        }
 
         layer.render(texture, 1.0); // Always use full blending
 
@@ -707,5 +865,6 @@ export class Scene {
         gl.disable(gl.SCISSOR_TEST);
       }
     }
+    defaultCtx.restore();
   }
 }
