@@ -39,6 +39,18 @@ export default class Mation {
   getPan(scene: Scene) {
     return scene.pan;
   }
+  
+  setTargetFPS(fps: number) {
+    if (this.scene) {
+      this.scene.setTargetFPS(fps);
+    }
+  }
+  
+  queueRender() {
+    if (this.scene) {
+      this.scene.queueRender();
+    }
+  }
 
   async initialize(container: Element) {
     // If we have a scene already, set up the canvas for it
@@ -77,6 +89,12 @@ export default class Mation {
         await renderToVideo(this.scene, { outputFormat: format });
       } else {
         console.error("No scene available to render");
+      }
+    };
+    (window as any).setTargetFPS = (fps: number) => {
+      if (this.scene) {
+        this.scene.setTargetFPS(fps);
+        console.log(`Target FPS set to ${fps}`);
       }
     };
   }
@@ -301,6 +319,8 @@ export default class Mation {
     });
 
     // Zoom with mouse wheel
+    let wheelTimeout: number | null = null;
+    
     this.scene?.canvas?.addEventListener('wheel', (event) => {
       if (!this.scene) return;
 
@@ -328,8 +348,25 @@ export default class Mation {
         newZoom = Math.min(10, currentZoom * 1.1);
       }
 
-      // Apply the new zoom
+      // Apply the new zoom - this will use queueRender internally
       this.scene.setZoom(newZoom);
+      
+      // Enable force default layer only while zooming
+      this.scene.setForceDefaultLayerOnly(true);
+      
+      // Clear any existing timeout
+      if (wheelTimeout !== null) {
+        clearTimeout(wheelTimeout);
+      }
+      
+      // Set a new timeout to detect when zooming stops
+      wheelTimeout = window.setTimeout(() => {
+        // Set force default layer to false when zooming stops
+        if (this.scene) {
+          this.scene.setForceDefaultLayerOnly(false);
+        }
+        wheelTimeout = null;
+      }, 200); // 200ms debounce time
     }, { passive: false });
     
     // Pan with Alt + mouse drag
@@ -354,7 +391,7 @@ export default class Mation {
       const deltaX = event.clientX - lastX;
       const deltaY = event.clientY - lastY;
       
-      // Update pan values
+      // Update pan values - this will use queueRender internally
       const [currentX, currentY] = this.scene.pan;
       this.scene.setPan([currentX + deltaX, currentY + deltaY]);
 
@@ -364,6 +401,7 @@ export default class Mation {
     
     this.scene?.canvas?.addEventListener('mouseup', () => {
       isPanning = false;
+      this.scene.setForceDefaultLayerOnly(false);
     });
     
     // Touch-based panning with two fingers

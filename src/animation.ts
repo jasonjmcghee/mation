@@ -135,22 +135,17 @@ export class Scene {
     this._pan[0] = newPanX;
     this._pan[1] = newPanY;
 
-    this.setForceDefaultLayerOnly(true);
-    // Re-render with updated transforms
-    this.clear();
-    // Also renders...
-    // this.renderAtTime(this.currentTime);
-    this.setForceDefaultLayerOnly(false);
+    // this.setForceDefaultLayerOnly(true);
+    // Queue render with updated transforms
+    this.queueRender();
     this.savePlayerState();
   }
   
   setPan(value: [number, number]): void {
     this._pan = value;
     this.setForceDefaultLayerOnly(true);
-    this.clear();
-    // Also renders...
-    // this.renderAtTime(this.currentTime);
-    this.setForceDefaultLayerOnly(false);
+    // Queue render with updated transforms
+    this.queueRender();
     this.savePlayerState();
   }
 
@@ -175,6 +170,9 @@ export class Scene {
   private totalDuration: number = 0;
   private lastRenderTime: number = 0;
   private forceDefaultLayerOnly: boolean = false;
+  private renderQueued: boolean = false;
+  private targetFPS: number = 60;
+  private frameInterval: number = 1000 / 60; // 16.67ms for 60fps
   
   // State persistence key
   private static readonly PLAYER_STATE_KEY = 'mation_player_state';
@@ -548,55 +546,98 @@ export class Scene {
     return this.currentTime;
   }
   
+  // Queue a render request that will be processed at the target FPS
+  queueRender(): void {
+    // Always set renderQueued to true when queueRender is called
+    this.renderQueued = true;
+    
+    // Start the render loop if it's not already running
+    if (!this.animationId) {
+      this.lastRenderTime = performance.now();  // Reset lastRenderTime to avoid jumps
+      this.animationId = requestAnimationFrame(this.renderLoop);
+    }
+  }
+
+  // Set the target FPS for rendering
+  setTargetFPS(fps: number): void {
+    this.targetFPS = Math.max(1, fps);
+    this.frameInterval = 1000 / this.targetFPS;
+  }
+
   // Start the main animation loop
   private startAnimationLoop(): void {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
     
-    const animate = (timestamp: number) => {
-      if (!this.isPlaying) return;
+    // Set renderQueued to true when playing to ensure continuous rendering
+    this.renderQueued = true;
+    
+    // Start the render loop which will respect target FPS
+    this.renderLoop();
+  }
+  
+  // Main render loop that respects target FPS
+  private renderLoop = (): void => {
+    const now = performance.now();
+    const elapsed = now - this.lastRenderTime;
+    
+    // Only render if enough time has passed (target FPS) or if we're just starting
+    if (elapsed >= this.frameInterval || this.lastRenderTime === 0) {
+      // Update the last render time regardless of what we're doing
+      this.lastRenderTime = now;
       
-      const deltaTime = (timestamp - this.lastRenderTime) / 1000; // Convert to seconds
-      this.lastRenderTime = timestamp;
-      
-      // Update current time with clamping to valid range
-      const prevTime = this.currentTime;
-      this.currentTime = Math.min(this.currentTime + deltaTime, this.totalDuration);
-      
-      // Render at the current time
-      this.renderAtTime(this.currentTime);
-      
-      // Save current player state
-      this.savePlayerState();
-      
-      // Call onFrame callback if provided
-      if (this.onFrame) {
-        this.onFrame();
-      }
-      
-      // Check if we reached the end of animation
-      if (this.currentTime >= this.totalDuration) {
-        // We reached the end, stop the animation
-        this.isPlaying = false;
+      // Update time for playing animations
+      if (this.isPlaying) {
+        const deltaTime = elapsed / 1000; // Convert to seconds
         
-        // Ensure we render the final frame
-        if (prevTime < this.totalDuration) {
-          this.renderAtTime(this.totalDuration);
-        }
+        // Update current time with clamping to valid range
+        const prevTime = this.currentTime;
+        this.currentTime = Math.min(this.currentTime + deltaTime, this.totalDuration);
         
-        // Save player state after stopping
+        // Render at the current time
+        this.renderAtTime(this.currentTime);
+        
+        // Save current player state
         this.savePlayerState();
         
-        return; // Don't request another frame
+        // Call onFrame callback if provided
+        if (this.onFrame) {
+          this.onFrame();
+        }
+        
+        // Check if we reached the end of animation
+        if (this.currentTime >= this.totalDuration) {
+          // We reached the end, stop the animation
+          this.isPlaying = false;
+          
+          // Ensure we render the final frame
+          if (prevTime < this.totalDuration) {
+            this.renderAtTime(this.totalDuration);
+          }
+          
+          // Save player state after stopping
+          this.savePlayerState();
+        }
+      } else if (this.renderQueued) {
+        // If not playing but render is queued, render at current time
+        this.renderAtTime(this.currentTime);
+        // Reset renderQueued flag after rendering once
+        this.renderQueued = false;
       }
-      
-      // Continue animation
-      this.animationId = requestAnimationFrame(animate);
-    };
+    }
     
-    this.lastRenderTime = performance.now();
-    this.animationId = requestAnimationFrame(animate);
+    // Always keep renderQueued true while playing
+    if (this.isPlaying) {
+      this.renderQueued = true;
+    }
+    
+    // Continue the loop if playing or if render is queued
+    if (this.isPlaying || this.renderQueued) {
+      this.animationId = requestAnimationFrame(this.renderLoop);
+    } else {
+      this.animationId = null;
+    }
   }
   
   // Render the animation at a specific time
@@ -654,8 +695,8 @@ export class Scene {
     // Update the last render time to avoid large time jumps when animation resumes
     this.lastRenderTime = performance.now();
     
-    // Render at this time
-    this.renderAtTime(targetTime);
+    // Queue render at this time
+    this.queueRender();
     
     // If we seek to the end, make sure isPlaying is false
     if (targetTime >= this.totalDuration) {
@@ -672,8 +713,8 @@ export class Scene {
       this.forceDefaultLayerOnly = value;
 
       if (!this.forceDefaultLayerOnly) {
-        // Re-render at current time to apply the change
-        this.renderAtTime(this.currentTime);
+        // Queue re-render to apply the change
+        this.queueRender();
       }
     }
   }
