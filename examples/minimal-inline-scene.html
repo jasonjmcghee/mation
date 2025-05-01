@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mation Minimal Inline Scene</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    #preview {
+      margin: 0 auto;
+      max-width: 800px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+  <!-- Include required library files -->
+  <script type="module" src="../dist/mation.js"></script>
+  <!-- Additional libs needed for rendering -->
+  <script src="../public/libs/ffmpeg/ffmpeg.min.js"></script>
+  <script src="../public/libs/jszip/jszip.min.js"></script>
+</head>
+<body>
+  <div id="preview"></div>
+
+  <script type="module">
+    import { Mation, Scene } from '../dist/mation.js';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const app = document.querySelector("#preview");
+      if (!app) return;
+
+      // Create canvas
+      const canvas = document.createElement("canvas");
+      const width = 800;
+      const height = 450;
+      canvas.width = width;
+      canvas.height = height;
+      app.append(canvas);
+      
+      // Create Mation instance
+      const mation = new Mation();
+
+      // Create an EXTREMELY minimal scene directly in-line
+      // This demonstrates how simple a scene can be
+      const scene = new Scene({ canvas, width, height });
+      
+      // Override the required methods right in-place
+      scene.setupLayers = function() {
+        // No custom layers needed
+      };
+
+      // Define the animation sequence directly
+      scene.animationSequence = function*() {
+        // First frame - background
+        this.animate([{
+          draw(ctx) {
+            // Fill background with gradient
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#3498db');
+            gradient.addColorStop(1, '#2c3e50');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+          }
+        }], { duration: 0 });
+
+        // Animate a square
+        this.animate([{
+          draw(ctx, progress) {
+            // Draw translucent square that grows with progress
+            const size = 50 + progress * 100;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillRect(
+              width/2 - size/2, 
+              height/2 - size/2,
+              size, 
+              size
+            );
+            
+            // Add text
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Minimal Scene Example', width/2, height/2 + size/2 + 40);
+          }
+        }], { duration: 2.0 });
+      };
+
+      // Set the scene and initialize
+      mation.setScene(scene);
+      await mation.initialize(app);
+    });
+  </script>
+</body>
+</html>
