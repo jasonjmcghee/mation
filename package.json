@@ -1,18 +1,41 @@
 {
   "name": "mation",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A JavaScript animation and scene rendering library",
   "type": "module",
+  "main": "dist/mation.js",
+  "module": "dist/mation.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "examples",
+    "public/libs",
+    "src/style.css"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "render": "node cli.cjs render",
     "start-server": "node server.js",
-    "build-server": "node build-server.js"
+    "build-server": "node build-server.js",
+    "prepare": "npm run build"
   },
   "bin": {
     "mation": "./cli.cjs"
+  },
+  "keywords": [
+    "animation",
+    "webgl",
+    "canvas",
+    "rendering",
+    "visualization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/mation.git"
   },
   "dependencies": {
     "polymorph-js": "1.0.2"

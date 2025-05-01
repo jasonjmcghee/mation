@@ -2,15 +2,728 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="/libs/ffmpeg/ffmpeg.min.js"></script>
-    <script src="/libs/ffmpeg/util.min.js"></script>
-    <script src="/libs/jszip/jszip.min.js"></script>
     <title>Animation</title>
+    <script type="module" src="dist/mation.js"></script>
   </head>
   <body>
     <div id="preview"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="svgs" style="display: none">
+    </div>
+
+    <script type="module">
+      import { Mation, Scene, buildWebGlPipeline, Easing, Layer } from './dist/mation.js';
+      export const curvePath = "M-703.8092941984535 -63.90098386146127 C-704.0763520597816 -64.41465948657691, -704.4180525933509 -62.04943193707276, -704.6104677824378 -65.44201073680819 C-704.8028829715247 -68.83458953654362, -705.1013435512815 -78.97456875285403, -704.9637853329749 -84.25645665987383 C-704.8262271146683 -89.53834456689364, -704.589649678056 -92.25655284020733, -703.7851184725982 -97.13333817892703 C-702.9805872671404 -102.01012351764673, -701.9583551113512 -107.45010323371551, -700.1365981002284 -113.51716869219206 C-698.3148410891056 -119.5842341506686, -695.8465710937803 -126.38978672762848, -692.854576405861 -133.53573092978633 C-689.8625817179418 -140.6816751319442, -686.2740402853385 -148.63827476272067, -682.1846299727131 -156.39283390513918 C-678.0952196600877 -164.1473930475577, -673.4873271054563 -172.05990209352422, -668.3181145301085 -180.06308578429736 C-663.1489019547606 -188.0662694750705, -657.3197817827187 -196.40057192323476, -651.1693545206261 -204.41193604977798 C-645.0189272585336 -212.4233001763212, -638.3490835573479 -220.37131437072378, -631.415550957553 -228.13127054355664 C-624.4820183577582 -235.8912267163895, -617.6357763947518 -243.39760651050042, -609.568158921857 -250.97167308677507 C-601.5005414489623 -258.5457396630497, -593.0586479967965 -266.03286008526703, -583.0098461201843 -273.57567000120446 C-572.9610442435721 -281.1184799171419, -561.662819416665 -289.023955061226, -549.275347662184 -296.2285325823996 C-536.887875907703 -303.43311010357326, -522.679438253175 -310.71836744796565, -508.6850155932983 -316.80313512824614 C-494.6905929334216 -322.88790280852663, -479.35297948974716 -328.3719341366817, -465.3088117029238 -332.7371386640825 C-451.2646439161004 -337.1023431914833, -437.48954127048455 -340.44736671466114, -424.42000887235804 -342.99436229265086 C-411.3504764742315 -345.5413578706406, -398.59397240096337 -347.44242251563657, -386.8916173141647 -348.0191121320209 C-375.18926222736604 -348.5958017484052, -364.27089364708365 -348.65249596885496, -354.20587835156607 -346.45449999095683 C-344.1408630560485 -344.2565040130587, -334.66563656594394 -341.6348563572863, -326.5015255410593 -334.8311362646323 C-318.3374145161747 -328.02741617197825, -310.80835036510854 -318.96869010201686, -305.22121220225824 -305.63217943503264 C-299.63407403940795 -292.2956687680484, -295.1296754834034 -274.0727397265082, -292.97869656395756 -254.81207226272704 C-290.8277176445117 -235.55140479894587, -290.2925601460474 -213.33362143707544, -292.31533868558313 -190.06817465234565 C-294.3381172251189 -166.80272786761586, -297.16983442204815 -145.93497563136975, -305.11536780117217 -115.21939155434825 C-313.0609011802962 -84.50380747732675, -329.51339504426795 -37.593181021039825, -339.98853896032733 -5.774670190216625 C-350.4636828763867 26.04384064060658, -351.079046147025 29.207456773529394, -367.96623129752857 75.69167343059098 C-384.85341644803214 122.17589008765256, -427.2363685319144 234.11218776004432, -441.31164986334886 273.1306297521529 C-455.3869311947833 312.1490717442615, -450.10622668785544 301.2794805293817, -452.4179192861354 309.80232538324253 C-454.7296118844153 318.32517023710335, -454.3099058166018 317.87991486777304, -455.1818054530284 324.26769887531793 C-456.053705089455 330.6554828828628, -457.308736407731 342.5624552154656, -457.64931710469466 348.1290294285118 C-457.98989780165834 353.69560364155797, -457.62850217241186 354.70066401384463, -457.22528963481034 357.6671441535949 C-456.8220770972088 360.6336242933452, -456.1133711865135 363.3925209702384, -455.23004187908555 365.9279102670133 C-454.3467125716576 368.4632995637882, -453.40355912145003 370.7653368282367, -451.92531379024257 372.87947993424416 C-450.4470684590351 374.99362304025163, -449.1342326330902 376.9119277067065, -446.36056989184067 378.61276890305805 C-443.5869071505911 380.31361009940963, -440.27353331537614 382.24739647534966, -435.2833373427453 383.0845271123536 C-430.2931413701145 383.92165774935756, -423.99338118227763 385.1756541051118, -416.4193940560557 383.6355527250819 C-408.84540692983376 382.09545134505197, -400.18780026766626 380.49699344255913, -389.8394145854138 373.84391883217404 C-379.49102890316135 367.19084422178895, -366.7271903481065 356.97504588115737, -354.3290799625411 343.71710506277145 C-341.93096957697566 330.45916424438553, -328.02327777004115 313.15935123316063, -315.4507522720214 294.2962739218584 C-302.8782267740017 275.4331966105562, -299.6032950975076 271.92757046841484, -278.8939269744227 230.53864119495813 C-258.1845588513378 189.14971192150145, -210.612014359554 84.5401469506534, -191.19454353351193 45.962698281118264 C-171.77707270746987 7.385249611583141, -172.82768426835023 13.463923649880684, -162.38910201817032 -0.9260508222525914 C-151.95051976799041 -15.316025294385867, -140.7072099029987 -28.680409220967654, -128.56305003243256 -40.37714855168139 C-116.4188901618664 -52.07388788239512, -101.8685033637267 -62.39528919532237, -89.52414279477341 -71.10648680653497 C-77.17978222582012 -79.81768441774757, -64.94221522803493 -86.81044369577968, -54.49688661871278 -92.644334218957 C-44.051558009390625 -98.47822474213432, -35.59125091371175 -102.45138642424112, -26.852171138840504 -106.10982994559885 C-18.11309136396926 -109.76827346695657, -10.099254332034263 -112.33228457336881, -2.062407969485321 -114.59499534710335 C5.974438393063622 -116.85770612083789, 13.778665594653223 -118.35943796852386, 21.36890703645315 -119.68609458800609 C28.95914847825308 -121.01275120748831, 36.07159511887784 -122.31150832247233, 43.479040681314245 -122.55493506399665 C50.88648624375065 -122.79836180552097, 58.600164453424476 -122.190493027696, 65.8135804110716 -121.14665503715202 C73.02699636871871 -120.10281704660804, 80.33368736817692 -118.51967688744004, 86.75953642719696 -116.29190712073279 C93.185385486217 -114.06413735402553, 98.80493389257356 -111.23854016084813, 104.36867476519183 -107.78003643690846 C109.9324156378101 -104.32153271296879, 115.4822212636534 -100.18281664479878, 120.14198166290657 -95.54088477709473 C124.80174206215975 -90.89895290939069, 128.67563521072643 -85.6822269705928, 132.32723716071087 -79.92844523068419 C135.9788391106953 -74.17466349077559, 139.18500057953824 -67.76671435858289, 142.05159336281326 -61.01819433764308 C144.9181861460883 -54.26967431670328, 147.35247796795213 -46.656771225783096, 149.52679386036107 -39.437325105045375 C151.70110975277 -32.21787898430765, 151.80143767738295 -32.070156852505384, 155.09748871726697 -17.701517613216765 C158.393539757151 -3.332878373928148, 165.78064471942545 32.14925188353558, 169.30310009966524 46.774510330686326 C172.82555547990503 61.399768777837075, 173.38853041786777 62.502151228319065, 176.23222099870577 70.05003306968774 C179.07591157954377 77.59791491105642, 182.40067555656321 85.38474304293419, 186.3652435846932 92.0618013788984 C190.32981161282316 98.7388597148626, 194.90861454658375 104.94763139115173, 200.01962916748562 110.11238308547297 C205.1306437883875 115.27713477979421, 210.5930844384591 119.5741174197281, 217.0313313101044 123.05031154482583 C223.4695781817497 126.52650566992357, 230.64190804813268 129.55212801105284, 238.6491103973574 130.9695478360594 C246.6563127465821 132.38696766106597, 255.6316747474162 133.2377934006989, 265.0745454054527 131.5548304948652 C274.5174160634892 129.8718675890315, 284.47720533318744 126.6411242863917, 295.30633434557626 120.87177040105723 C306.1354633579651 115.10241651572277, 317.6476041683253 107.1729355651965, 330.0493194797857 96.93870718285837 C342.4510347912461 86.70447880052023, 342.2475031865511 88.74600615955677, 369.7166262143387 59.46640010702845 C397.1857492421263 30.186794054500126, 468.5957053881921 -50.12593336685471, 494.86405764651136 -78.73892913231157 C521.1324099048306 -107.35192489776843, 517.2486716576236 -102.29287070070397, 527.3267397642544 -112.21157448571267 C537.4048078708852 -122.13027827072138, 545.3492916395207 -129.3619233255413, 555.3324662862963 -138.25115184236375 C565.3156409330718 -147.1403803591862, 577.1832734469696 -158.00997752113406, 587.2257876449078 -165.54694558664733 C597.268301842846 -173.0839136521606, 606.1336301975864 -177.49762201917804, 615.5875514739257 -183.4729602354434";
+
+      // Add the curve path as a display non svg
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", curvePath);
+      svg.appendChild(path);
+      document.querySelector("#svgs").appendChild(svg);
+
+      const polygonLayerShader = {
+        fragmentShader: `in vec2 vUv;
+out vec4 fragColor;
+uniform sampler2D u_texture;
+uniform float u_progress;
+
+void main() {
+  vec4 color = texture(u_texture, vUv);
+  // Add a slight red enhancement
+  color.r = min(1.0, color.r * (1.0 + 0.2 * u_progress));
+  fragColor = color;
+}`,
+        uniforms: {
+          u_texture: null,
+          u_progress: 0.0
+        }
+      };
+
+      export class MyScene extends Scene {
+        setupLayers() {
+          // Create curve layer with its own pipeline
+          const curvePipeline = buildWebGlPipeline(this.canvas);
+          const resolution = [this.width, this.height];
+          const {
+            render: seedRender, renderTargets: seedRenderTargets
+          } = curvePipeline.add({
+            fragmentShader: `
+        uniform sampler2D surfaceTexture;
+        uniform vec2 resolution;
+        out vec4 FragColor;
+
+        in vec2 vUv;
+
+        void main() {
+          float alpha = texelFetch(surfaceTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).a;
+          FragColor = vec4(vUv * round(alpha), 0.0, 1.0);
+        }`,
+            uniforms: {
+              resolution,
+              surfaceTexture: null,
+            }
+          }, {
+            internalFormat: curvePipeline.gl().RGBA32F,
+            format: curvePipeline.gl().RGBA,
+            type: curvePipeline.gl().FLOAT,
+          });
+
+          const passes = Math.ceil(Math.log2(Math.max(this.width, this.height))) + 1;
+          const {
+            render: jfaRender, renderTargets: jfaRenderTargets, uniforms: jfaUniforms,
+          } = curvePipeline.add({
+            fragmentShader: `
+uniform vec2 oneOverSize;
+uniform vec2 resolution;
+uniform sampler2D inputTexture;
+uniform float uOffset;
+uniform int direction;
+uniform bool skip;
+uniform int passes;
+
+const int MAX_TILE_SIZE = 32;
+
+const float SQRT_2 = 1.41;
+
+in vec2 vUv;
+out vec4 FragColor;
+
+void classic() {
+  if (skip) {
+    FragColor = vec4(vUv, 0.0, 1.0);
+  } else {
+    vec2 nearestSeed = vec2(-1.0);
+    float nearestDist = 999999.9;
+    vec2 pre = uOffset * oneOverSize;
+
+    // Start with the center to try to appeal to loading in a block
+    vec2 sampleUV = vUv;
+
+    // Check if the sample is within bounds
+    vec2 sampleValue = texture(inputTexture, sampleUV).xy;
+    vec2 sampleSeed = sampleValue.xy;
+
+    if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
+      vec2 diff = sampleSeed - vUv;
+      float dist = dot(diff, diff);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestSeed.xy = sampleValue.xy;
+      }
+    }
+
+    // Then do the rest
+    for (float y = -1.0; y <= 1.0; y += 1.0) {
+      for (float x = -1.0; x <= 1.0; x += 1.0) {
+        if (x == 0.0 && y == 0.0) { continue; }
+        vec2 sampleUV = vUv + vec2(x, y) * pre;
+
+        // Check if the sample is within bounds
+        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) { continue; }
+
+          vec2 sampleValue = texture(inputTexture, sampleUV).xy;
+          vec2 sampleSeed = sampleValue.xy;
+
+          if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
+            vec2 diff = sampleSeed - vUv;
+            float dist = dot(diff, diff);
+            if (dist < nearestDist) {
+              nearestDist = dist;
+              nearestSeed.xy = sampleValue.xy;
+            }
+          }
+      }
+    }
+
+    FragColor = vec4(nearestSeed, 0.0, 1.0);
+  }
+}
+
+void main() {
+  classic();
+}`,
+            uniforms: {
+              inputTexture: null,
+              resolution: [this.width, this.height],
+              oneOverSize: [1.0 / this.width, 1.0 / this.height],
+              uOffset: Math.pow(2, passes - 1),
+              direction: 0,
+              passes: passes,
+              skip: true,
+            }
+          }, {
+            internalFormat: curvePipeline.gl().RGBA32F,
+            format: curvePipeline.gl().RGBA,
+            type: curvePipeline.gl().FLOAT,
+          });
+          const {render: dfRender, renderTargets: dfRenderTargets} = curvePipeline.add({
+            uniforms: {
+              resolution: [this.width, this.height],
+              jfaTexture: null,
+              surfaceTexture: null,
+            },
+            fragmentShader: `
+        uniform sampler2D jfaTexture;
+        uniform sampler2D surfaceTexture;
+        uniform vec2 resolution;
+
+        in vec2 vUv;
+        out vec4 FragColor;
+
+        void main() {
+          ivec2 texel = ivec2(vUv.x * resolution.x, vUv.y * resolution.y);
+          vec2 nearestSeed = texelFetch(jfaTexture, texel, 0).xy;
+          float dist = clamp(distance(vUv, nearestSeed), 0.0, 1.0);
+
+          // Normalize and visualize the distance
+          FragColor = vec4(dist, 0.0, 0.0, 1.0);
+        }`,
+          });
+
+          const {uniforms: curveUniforms, render: giRender, renderTargets: giRenderTargets} = curvePipeline.add({
+            uniforms: {
+              resolution: [this.width, this.height],
+              oneOverSize: [1.0 / this.width, 1.0 / this.height],
+              sceneTexture: null,
+              distanceTexture: null,
+              rayCount: 16,
+              maxSteps: 80,
+              sunAngle: 0.4,
+              enableSun: false,
+              showGrain: false,
+              showNoise: true,
+            },
+            fragmentShader: `
+uniform int rayCount;
+uniform float sunAngle;
+uniform bool showNoise;
+uniform bool showGrain;
+uniform bool enableSun;
+uniform vec2 oneOverSize;
+uniform int maxSteps;
+
+uniform sampler2D sceneTexture;
+uniform sampler2D distanceTexture;
+
+out vec4 FragColor;
+in vec2 vUv;
+
+const float PI = 3.14159265;
+const float TAU = 2.0 * PI;
+const float ONE_OVER_TAU = 1.0 / TAU;
+const float PAD_ANGLE = 0.01;
+const float EPS = 0.001f;
+
+const vec3 skyColor = vec3(0.02, 0.08, 0.2);
+const vec3 sunColor = vec3(0.95, 0.95, 0.9);
+const float goldenAngle = PI * 0.7639320225;
+
+// Popular rand function
+float rand(vec2 co) {
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+vec3 sunAndSky(float rayAngle) {
+    // Get the sun / ray relative angle
+    float angleToSun = mod(rayAngle - sunAngle, TAU);
+
+    // Sun falloff based on the angle
+    float sunIntensity = smoothstep(1.0, 0.0, angleToSun);
+
+    // And that's our sky radiance
+    return sunColor * sunIntensity + skyColor;
+}
+
+bool outOfBounds(vec2 uv) {
+    return uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0;
+}
+
+void main() {
+    vec2 uv = vUv;
+
+    vec4 light = texture(sceneTexture, uv);
+
+    vec4 radiance = vec4(0.0);
+
+    float oneOverRayCount = 1.0 / float(rayCount);
+    float angleStepSize = TAU * oneOverRayCount;
+
+    float coef = 0.0;
+    float offset = showNoise ? rand(uv + coef) : 0.0;
+    float rayAngleStepSize = showGrain ? angleStepSize + offset * TAU : angleStepSize;
+    float minStepSize = min(oneOverSize.x, oneOverSize.y);
+
+    // Not light source or occluder
+    if (light.a < 0.1) {
+        // Shoot rays in "rayCount" directions, equally spaced, with some randomness.
+        for(int i = 0; i < rayCount; i++) {
+            float angle = rayAngleStepSize * (float(i) + offset) + sunAngle;
+            vec2 rayDirection = vec2(cos(angle), -sin(angle));
+
+            vec2 sampleUv = uv;
+            vec4 radDelta = vec4(0.0);
+            bool hitSurface = false;
+
+            // We tested uv already (we know we aren't an object), so skip step 0.
+            for (int step = 1; step < maxSteps; step++) {
+                // How far away is the nearest object?
+                float dist = texture(distanceTexture, sampleUv).r;
+
+                // Go the direction we're traveling (with noise)
+                sampleUv += rayDirection * dist;
+
+                if (outOfBounds(sampleUv)) break;
+
+                if (dist <= minStepSize) {
+                    vec4 sampleColor = texture(sceneTexture, sampleUv);
+                    radDelta += sampleColor;
+                    hitSurface = true;
+                    break;
+                }
+            }
+
+            // If we didn't find an object, add some sky + sun color
+            if (!hitSurface && enableSun) {
+                radDelta += vec4(sunAndSky(angle), 1.0);
+            }
+
+            // Accumulate total radiance
+            radiance += radDelta;
+        }
+    } else if (length(light.rgb) >= 0.1) {
+        radiance = light;
+    }
+
+
+    // Bring up all the values to have an alpha of 1.0.
+    vec4 finalRadiance = vec4(max(light, radiance * oneOverRayCount).rgb, 1.0);
+    FragColor = finalRadiance;
+}`,
+          }, {
+            // magFilter: curvePipeline.gl().LINEAR,
+            // minFilter: curvePipeline.gl().LINEAR,
+            internalFormat: curvePipeline.gl().RGBA16F,
+          });
+
+          const { render: debandingRender } = curvePipeline.add({
+            fragmentShader: `
+// This shader reduces color banding by adding controlled noise to smooth gradients
+
+uniform sampler2D inputTexture;
+uniform float noiseAmount;
+uniform float ditherRange; // Range of colors to analyze for banding
+uniform vec2 resolution;
+
+in vec2 vUv;
+out vec4 FragColor;
+
+float random(vec2 coords) {
+    return fract(sin(dot(coords.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = vUv;
+    
+    // Sample the original color
+    vec4 originalColor = texture(inputTexture, uv);
+    
+    // Generate controlled noise based on position
+    // This helps break up banding patterns
+    vec3 noise = vec3(
+        random(uv + 0.07 * fract(vec2(1.0, 0.0))),
+        random(uv + 0.07 * fract(vec2(0.0, 1.0))),
+        random(uv + 0.07 * fract(vec2(1.0, 1.0)))
+    );
+    
+    // Remap noise from [0,1] to [-0.5,0.5]
+    noise = noise - 0.5;
+    
+    // Apply noise only to smooth gradients
+    // First, sample neighboring pixels to detect gradients
+    vec4 neighbors[4];
+    neighbors[0] = texture(inputTexture, uv + vec2(1.0, 0.0) / resolution);
+    neighbors[1] = texture(inputTexture, uv + vec2(-1.0, 0.0) / resolution);
+    neighbors[2] = texture(inputTexture, uv + vec2(0.0, 1.0) / resolution);
+    neighbors[3] = texture(inputTexture, uv + vec2(0.0, -1.0) / resolution);
+    
+    // Calculate color differences
+    float colorDifference = 0.0;
+    for (int i = 0; i < 4; i++) {
+        colorDifference += distance(originalColor.rgb, neighbors[i].rgb);
+    }
+    colorDifference /= 4.0;
+    
+    // Apply more noise to areas with subtle gradient changes (where banding occurs)
+    // and less noise to areas with sharp changes or flat colors
+    float bandingDetection = 1.0 - smoothstep(0.0, ditherRange, colorDifference);
+    
+    // Apply the noise with intensity control
+    vec3 finalColor = originalColor.rgb + noise * noiseAmount * bandingDetection;
+    
+    // Output the processed color
+    FragColor = vec4(finalColor, originalColor.a);
+}`,
+            uniforms: {
+              inputTexture: null,
+              noiseAmount: 0.015,
+              ditherRange: 1.0,
+              resolution: [this.width, this.height],
+            }
+          })
+
+          const curveLayer = new Layer(
+            'curve-layer',
+            curvePipeline,
+            (texture, _) => {
+              seedRender({
+                renderTarget: seedRenderTargets[0],
+                uniforms: { surfaceTexture: texture }
+              });
+
+              let currentInput = seedRenderTargets[0].texture;
+
+              let [renderA, renderB] = jfaRenderTargets;
+              let currentOutput = renderA;
+              let passes = jfaUniforms.passes;
+
+              for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
+                const offset = Math.pow(2, passes - i - 1);
+
+                jfaRender({
+                  renderTarget: currentOutput,
+                  uniforms: {
+                    skip: passes === 0,
+                    inputTexture: currentInput,
+                    // This intentionally uses `this.passes` which is the true value
+                    // In order to properly show stages using the JFA slider.
+                    uOffset: offset,
+                    direction: 0,
+                  },
+                });
+
+                currentInput = currentOutput.texture;
+                currentOutput = (currentOutput === renderA) ? renderB : renderA;
+              }
+
+              dfRender({
+                renderTarget: dfRenderTargets[0],
+                uniforms: {
+                  jfaTexture: currentOutput.texture,
+                  surfaceTexture: texture,
+                }
+              });
+
+              giRender({
+                renderTarget: giRenderTargets[0],
+                uniforms: {
+                  distanceTexture: dfRenderTargets[0].texture,
+                  sceneTexture: texture,
+                }
+              });
+
+              debandingRender({
+                uniforms: {
+                  inputTexture: giRenderTargets[0].texture,
+                }
+              })
+            },
+            {
+              ignorePanZoom: true,
+              extras: {
+                uniforms: curveUniforms,
+              },
+            });
+
+          const seedLayer = new Layer(
+            'seed-layer',
+            curvePipeline,
+            (texture, _) => {
+              seedRender({
+                uniforms: { surfaceTexture: texture }
+              });
+            },
+            {
+              x: this.width * 0.125,
+              y: this.height * 0.125,
+              width: this.width * 0.125,
+              height: this.height * 0.75,
+              isSubview: true,
+              renderWhenScrubbing: true,
+            }
+          );
+
+          const jfaLayer = new Layer(
+            'jfa-layer',
+            curvePipeline,
+            (texture, _) => {
+              seedRender({
+                renderTarget: seedRenderTargets[0],
+                uniforms: { surfaceTexture: texture }
+              });
+
+              let currentInput = seedRenderTargets[0].texture;
+
+              let [renderA, renderB] = jfaRenderTargets;
+              let currentOutput = renderA;
+              let passes = jfaUniforms.passes;
+
+              for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
+                const offset = Math.pow(2, passes - i - 1);
+
+                jfaRender({
+                  renderTarget: currentOutput,
+                  uniforms: {
+                    skip: passes === 0,
+                    inputTexture: currentInput,
+                    // This intentionally uses `this.passes` which is the true value
+                    // In order to properly show stages using the JFA slider.
+                    uOffset: offset,
+                    direction: 0,
+                  },
+                });
+
+                currentInput = currentOutput.texture;
+                currentOutput = (currentOutput === renderA) ? renderB : renderA;
+              }
+
+              jfaRender();
+            },
+            {
+              x: this.width * 0.25,
+              y: this.height * 0.125,
+              width: this.width * 0.125,
+              height: this.height * 0.75,
+              isSubview: true,
+              renderWhenScrubbing: true,
+            }
+          );
+
+          const dfLayer = new Layer(
+            'df-layer',
+            curvePipeline,
+            (texture, _) => {
+              seedRender({
+                renderTarget: seedRenderTargets[0],
+                uniforms: { surfaceTexture: texture }
+              });
+
+              let currentInput = seedRenderTargets[0].texture;
+
+              let [renderA, renderB] = jfaRenderTargets;
+              let currentOutput = renderA;
+              let passes = jfaUniforms.passes;
+
+              for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
+                const offset = Math.pow(2, passes - i - 1);
+
+                jfaRender({
+                  renderTarget: currentOutput,
+                  uniforms: {
+                    skip: passes === 0,
+                    inputTexture: currentInput,
+                    // This intentionally uses `this.passes` which is the true value
+                    // In order to properly show stages using the JFA slider.
+                    uOffset: offset,
+                    direction: 0,
+                  },
+                });
+
+                currentInput = currentOutput.texture;
+                currentOutput = (currentOutput === renderA) ? renderB : renderA;
+              }
+
+              dfRender({
+                uniforms: {
+                  jfaTexture: currentOutput.texture,
+                  surfaceTexture: texture,
+                }
+              });
+            },
+            {
+              x: this.width * 0.25,
+              y: this.height * 0.125,
+              width: this.width * 0.125,
+              height: this.height * 0.75,
+              isSubview: true,
+              renderWhenScrubbing: true,
+            }
+          );
+
+          // Create polygon layer with its own pipeline
+          const polygonPipeline = buildWebGlPipeline(this.canvas);
+          const polygonPipelineResult = polygonPipeline.add(polygonLayerShader);
+          const polygonLayer = new Layer(
+            'polygon-layer',
+            polygonPipeline,
+            (texture, progress) => {
+              polygonPipelineResult.render({
+                uniforms: {
+                  u_texture: texture,
+                  u_progress: progress
+                }
+              });
+            },
+            {}
+          );
+
+          this.pushLayer(curveLayer);
+          this.pushLayer(jfaLayer);
+          this.pushLayer(dfLayer);
+          this.pushLayer(seedLayer);
+          this.pushLayer(polygonLayer);
+        }
+        *animationSequence() {
+          const { width, height } = this.canvas;
+
+          this.animate([
+            {
+              // Path
+              layer: 'background',
+              draw(ctx, _) {
+                ctx.fillStyle = '#181818';
+                ctx.fillRect(0, 0, width, height);
+              }
+            },
+          ], { duration: 0.0 });
+
+          // --- Calculate canvas center ---
+          const centerX = this.canvas.width / 2;
+          const centerY = this.canvas.height / 2;
+
+          const polygonPath = `M ${width * 0.5} ${height * 0.6}
+                         L ${width * 0.5} ${height * 0.8}
+                         L ${width * 0.9} ${height * 0.9}
+                         L ${width * 0.5} ${height * 0.9}Z`;
+
+          this.animate([
+            {
+              // Path
+              layer: ['curve-layer', 'seed-layer', 'jfa-layer', 'df-layer'],
+              draw(ctx, progress, { layers }) {
+                if (layers['curve-layer'].extras) {
+                  layers['curve-layer'].extras.uniforms.enableSun = false;
+                }
+                layers['seed-layer'].x = width * 0.125 + progress * width * 0.25;
+                layers['jfa-layer'].x = width * 0.25 + progress * width * 0.25;
+                layers['df-layer'].x = width * 0.375 + progress * width * 0.25;
+
+                // --- Translate the origin to the canvas center ---
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.scale(width / 1920, height / 1080);
+                // Draw curve with progress
+                const length = path.getTotalLength();
+                const curvePath2D = new Path2D(curvePath);
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 8;
+
+                // Using the dash effect to animate the path
+                ctx.setLineDash([progress * length, length]);
+                ctx.lineDashOffset = 0;
+                ctx.lineWidth = 16;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke(curvePath2D);
+                ctx.restore();
+
+
+                const polygonPath2D = new Path2D(polygonPath);
+                ctx.fillStyle = '#000000';
+                ctx.fill(polygonPath2D);
+                ctx.fillStyle = '#000000';
+                ctx.font = "96px serif";
+                ctx.fillText("Hello", width * 0.65, height * 0.25);
+              }
+            },
+          ], { duration: 5.0, easing: Easing.easeInOutCubic, delay: 0.0 });
+
+          this.animate([
+            {
+              // Path
+              layer: 'curve-layer',
+              draw(_, progress, extras) {
+                extras.layers['seed-layer'].height = progress === 0 ? (height * 0.75) : (1.0 - progress) * (height * 0.75);
+
+                // Collapse jfa layer toward the center
+                extras.layers['jfa-layer'].height = progress === 0 ? (height * 0.75) : (1.0 - progress) * (height * 0.75);
+                extras.layers['jfa-layer'].y = progress === 0 ? height * 0.125 : height * 0.5 - ((1.0 - progress) * (height * 0.75)) / 2;
+
+                // Collapse df layer from top
+                const originalHeight = height * 0.75;
+                const newHeight = progress === 0 ? originalHeight : (1.0 - progress) * originalHeight;
+                extras.layers['df-layer'].height = newHeight;
+                extras.layers['df-layer'].y = height * 0.125 + (originalHeight - newHeight);
+              }
+            }
+          ], { duration: 1.0, easing: Easing.easeInOutCubic, parallel: true });
+
+          this.animate([
+            {
+              layer: 'curve-layer',
+              draw(_1, _2, { layers }) {
+                if (layers['curve-layer'].extras) {
+                  layers['curve-layer'].extras.uniforms.sunAngle = 0;
+                  layers['curve-layer'].extras.uniforms.enableSun = true;
+                }
+              }
+            }
+          ], { duration: 0.0, easing: Easing.easeInOutCubic, delay: 0.5, parallel: true });
+
+          this.animate([
+            {
+              layer: 'curve-layer',
+              draw(_, progress, { layers }) {
+                if (layers['curve-layer'].extras) {
+                  layers['curve-layer'].extras.uniforms.sunAngle = progress * 2.0 * 3.14;
+                }
+              }
+            }
+          ], { duration: 1.0, easing: Easing.easeInOutCubic, delay: 0.5 });
+
+
+          this.animate([
+            {
+              // Polygon
+              layer: 'polygon-layer',
+              draw(ctx, progress) {
+                const polygonPath2D = new Path2D(polygonPath);
+                const r = Math.floor(231 * progress);
+                const g = Math.floor(76 * progress);
+                const b = Math.floor(60 * progress);
+                const a = progress;
+
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+                ctx.fill(polygonPath2D);
+              }
+            }
+          ], { duration: 0.3, easing: Easing.easeInOutCubic, delay: 0.0 });
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const app = document.querySelector("#preview");
+        if (!app) return;
+
+        // Create canvas
+        const canvas = document.createElement("canvas");
+        const width = 1920;
+        const height = 1080;
+        canvas.width = width;
+        canvas.height = height;
+        app.append(canvas);
+
+        // Create Mation instance
+        const mation = new Mation();
+
+        const scene = new MyScene({canvas, width, height});
+
+        // Set the scene on the Mation instance
+        mation.setScene(scene);
+
+        // Initialize Mation (this will create UI controls and start the animation)
+        await mation.initialize(app);
+      });
+    </script>
   </body>
 </html>

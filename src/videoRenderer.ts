@@ -1,18 +1,9 @@
-import {Scene} from "./animation.ts";
-
-const { FFmpeg } = (window as any).FFmpegWASM;
-const ffmpeg = new FFmpeg();
+import { IScene } from "./animation.ts";
+import { loadRenderingLibraries, LibraryConfig } from "./loaders.ts";
 
 const NODE_PORT = 3005;
 
-document.addEventListener('DOMContentLoaded', async () => {
-// Load ffmpeg
-  await ffmpeg.load({
-    coreURL: '/libs/ffmpeg/ffmpeg-core.js',
-    wasmURL: '/libs/ffmpeg/ffmpeg-core.wasm'
-  });
-  console.log('FFmpeg loaded');
-});
+// FFmpeg will be loaded on demand when rendering is requested
 
 // Available output formats
 export type OutputFormat = 'mp4' | 'zip' | 'node_mp4';
@@ -31,7 +22,7 @@ export function getAvailableFormats(): OutputFormat[] {
 }
 
 // Render animation to MP4 video using ffmpeg-wasm
-export async function renderToVideo(scene: Scene, options: {
+export async function renderToVideo(scene: IScene, options: {
   framerate?: number;
   codec?: string;
   outputFile?: string;
@@ -39,7 +30,10 @@ export async function renderToVideo(scene: Scene, options: {
   fps?: number;
   onProgress?: (progress: number) => void;
   outputFormat?: OutputFormat;
+  libraryConfig?: LibraryConfig;
 } = {}): Promise<void> {
+  // Load required libraries first
+  await loadRenderingLibraries(options.libraryConfig);
   const {
     framerate = 60,
     codec = 'libx264',
@@ -80,6 +74,7 @@ export async function renderToVideo(scene: Scene, options: {
     frameNames.push(frameName);
     
     if (outputFormat === 'mp4') {
+      const ffmpeg = (window as any).ffmpegInstance;
       ffmpeg.writeFile(frameName, new Uint8Array(await blob.arrayBuffer()));
     } else {
       frameBlobs.push(blob);
@@ -95,6 +90,8 @@ export async function renderToVideo(scene: Scene, options: {
   if (onProgress) onProgress(outputFormat === 'mp4' ? 0.3 : 0.9); // Frame capture completed
 
   if (outputFormat === 'mp4') {
+    const ffmpeg = (window as any).ffmpegInstance;
+    
     // Set up progress handler for ffmpeg
     ffmpeg.on('progress', ({ progress }: { progress: number; time: number }) => {
       if (onProgress) {

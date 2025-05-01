@@ -1,6 +1,6 @@
 import './style.css'
-import Mation from "./mation.ts";
-import {FirstScene} from "./scenes/firstScene.ts";
+import { Mation } from "./index.ts";
+import { FirstScene } from "./scenes/firstScene.ts";
 
 document.addEventListener('DOMContentLoaded', async () => {
   const app = document.querySelector("#preview");

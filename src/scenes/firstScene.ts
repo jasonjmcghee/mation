@@ -1,7 +1,7 @@
-import {Scene, Layer} from "../animation.ts";
-import {Path} from "polymorph-js";
-import {Easing} from "../easings.ts";
-import {buildWebGlPipeline} from "../webgl.ts";
+import { Scene, Layer } from "../animation.ts";
+import { Path } from "polymorph-js";
+import { Easing } from "../easings.ts";
+import { buildWebGlPipeline } from "../webgl.ts";
 import { curvePath } from "../assets/firstSceneAssets.ts";
 
 const polygonLayerShader = {

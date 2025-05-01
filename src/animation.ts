@@ -2,6 +2,51 @@
 import {EasingFunction} from "./easings.ts";
 import {buildWebGlPipeline, WebGLInitResult, WebGLPipeline} from "./webgl.ts";
 
+/**
+ * Interface defining the requirements for any Mation Scene
+ * Developers can either extend the base Scene class or implement this interface
+ * to create custom scenes compatible with the Mation library.
+ */
+export interface IScene {
+  // Required properties
+  canvas: HTMLCanvasElement;
+  ctx: OffscreenCanvasRenderingContext2D;
+  width: number;
+  height: number;
+  
+  // Core animation methods
+  setupLayers(): void;
+  animationSequence(): Generator<Promise<void>, void, unknown>;
+  
+  // Animation control methods
+  play(): void;
+  pause(): void;
+  playing(): boolean;
+  seekToTime(time: number): void;
+  
+  // State getters
+  getCurrentTime(): number;
+  getDuration(): number;
+  
+  // Rendering methods
+  queueRender(): void;
+  renderAtTime(time: number): void;
+  
+  // Zoom and pan controls
+  setZoom(value: number): void;
+  setPan(value: [number, number]): void;
+  setMousePosition(x: number, y: number): void;
+  setForceDefaultLayerOnly(value: boolean): void;
+
+  setTargetFPS(fps: number): void;
+
+  runSequence(): Promise<void>;
+  get zoom(): number
+  set zoom(value: number);
+  get pan(): [number, number];
+  set pan(value: [number, number]);
+}
+
 interface AnimationOptions {
   duration: number;
   easing?: EasingFunction;
@@ -84,7 +129,13 @@ export interface AnimationSegment {
   easing: EasingFunction;
 }
 
-export class Scene {
+/**
+ * Base Scene class that implements the IScene interface
+ * This class provides the core implementation that handles animation,
+ * rendering, and interactions. Users can extend this class to create their
+ * own scenes.
+ */
+export class Scene implements IScene {
   canvas: HTMLCanvasElement;
   ctx: OffscreenCanvasRenderingContext2D;
   width: number;
@@ -172,7 +223,7 @@ export class Scene {
   private forceDefaultLayerOnly: boolean = false;
   private renderQueued: boolean = false;
   private targetFPS: number = 60;
-  private frameInterval: number = 1000 / 60; // 16.67ms for 60fps
+  private frameInterval: number = (1000 / 60) / 1000; // 16.67ms for 60fps
   
   // State persistence key
   private static readonly PLAYER_STATE_KEY = 'mation_player_state';
@@ -423,13 +474,26 @@ export class Scene {
     fn(this.ctx);
   }
 
-  setupLayers() {
-    // Setup Layers function to be implemented by user
-  }
+  /**
+   * Setup layers for the scene
+   * This method can be implemented by any Scene subclass to define the layers
+   * used in the animation.
+   */
+  setupLayers(): void {}
 
+  /**
+   * Define the animation sequence
+   * This generator function must be implemented by any Scene subclass to create
+   * the animation timeline.
+   * Use yield this.animate(...) to create animation segments.
+   * @example
+   * *animationSequence() {
+   *   yield this.animate([myElement], { duration: 1.0 });
+   * }
+   */
   *animationSequence(): Generator<Promise<void>, void, unknown> {
-    // Generator function to be implemented by the user
-    // yield this.animate(...)
+    // Must be implemented by subclass
+    throw new Error('animationSequence() must be implemented by Scene subclass');
   }
 
   // Method to run a sequence of animations and build the timeline
@@ -561,7 +625,7 @@ export class Scene {
   // Set the target FPS for rendering
   setTargetFPS(fps: number): void {
     this.targetFPS = Math.max(1, fps);
-    this.frameInterval = 1000 / this.targetFPS;
+    this.frameInterval = (1000 / this.targetFPS) / 1000;
   }
 
   // Start the main animation loop

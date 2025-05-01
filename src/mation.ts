@@ -1,8 +1,32 @@
-import {Scene} from "./animation.ts";
-import {renderToVideo, OutputFormat, getAvailableFormats} from "./videoRenderer.ts";
+import { IScene } from "./animation.ts";
+import { renderToVideo, OutputFormat, getAvailableFormats } from "./videoRenderer.ts";
+import { injectStyles, removeStyles } from "./styles.ts";
+import { LibraryConfig } from "./loaders.ts";
 
+/**
+ * Options for creating a new Mation instance
+ */
+export interface MationOptions {
+  /** Whether to enable rendering controls */
+  enableRendering?: boolean;
+  /** Whether to inject styles automatically */
+  injectStyles?: boolean;
+  /** 
+   * Configuration for external libraries.
+   * By default, libraries are automatically loaded from the same location as the Mation script.
+   */
+  libraryConfig?: LibraryConfig;
+}
+
+/**
+ * Mation - Main controller class for animation scenes
+ * 
+ * This class provides the UI and controls for playing, pausing, scrubbing,
+ * and rendering animations. It works with any class that implements the IScene
+ * interface.
+ */
 export default class Mation {
-  scene?: Scene;
+  scene?: IScene;
   private playPauseButton: HTMLButtonElement | null = null;
   private scrubber: HTMLInputElement | null = null;
   private timeDisplay: HTMLElement | null = null;
@@ -17,27 +41,43 @@ export default class Mation {
   private isDragging = false;
   private wasPlayingBeforeDrag = false;
   private isRendering = false;
+  private options: MationOptions;
 
-  constructor() {}
+  constructor(options: MationOptions = {}) {
+    this.options = {
+      enableRendering: true,
+      injectStyles: true,
+      ...options
+    };
+    
+    // Inject styles if requested
+    if (this.options.injectStyles) {
+      injectStyles();
+    }
+  }
 
-  setScene(scene: Scene) {
+  /**
+   * Set the scene to be controlled by this Mation instance
+   * @param scene Any object implementing the IScene interface
+   */
+  setScene(scene: IScene) {
     this.scene = scene;
   }
 
-  setZoom(scene: Scene, zoom: number) {
+  setZoom(scene: IScene, zoom: number) {
     scene.setZoom(zoom);
   }
 
-  setPan(scene: Scene, pan: [number, number]) {
+  setPan(scene: IScene, pan: [number, number]) {
     scene.setPan(pan);
   }
 
-  getZoom(scene: Scene) {
-    return scene.zoom;
+  getZoom(scene: IScene) {
+    return (scene as any).zoom;
   }
 
-  getPan(scene: Scene) {
-    return scene.pan;
+  getPan(scene: IScene) {
+    return (scene as any).pan;
   }
   
   setTargetFPS(fps: number) {
@@ -86,7 +126,10 @@ export default class Mation {
     (window as any).mation = this;
     (window as any).render = async (format: OutputFormat = 'mp4') => {
       if (this.scene) {
-        await renderToVideo(this.scene, { outputFormat: format });
+        await renderToVideo(this.scene, { 
+          outputFormat: format,
+          libraryConfig: this.options.libraryConfig 
+        });
       } else {
         console.error("No scene available to render");
       }
@@ -97,6 +140,29 @@ export default class Mation {
         console.log(`Target FPS set to ${fps}`);
       }
     };
+  }
+  
+  /**
+   * Clean up and destroy the Mation instance
+   * Call this when you're done with the Mation instance to clean up resources
+   */
+  destroy() {
+    // Pause any ongoing animation
+    if (this.scene) {
+      this.scene.pause();
+    }
+    
+    // Remove styles if they were injected
+    if (this.options.injectStyles) {
+      removeStyles();
+    }
+    
+    // Remove global references
+    if ((window as any).mation === this) {
+      delete (window as any).mation;
+      delete (window as any).render;
+      delete (window as any).setTargetFPS;
+    }
   }
 
   private setupControls(container: Element) {
@@ -138,67 +204,70 @@ export default class Mation {
     this.scrubber.className = 'scrubber';
     scrubberContainer.appendChild(this.scrubber);
     
-    // Create render dropdown container
-    this.renderDropdown = document.createElement('div');
-    this.renderDropdown.className = 'render-dropdown';
-    container.appendChild(this.renderDropdown);
-    
-    // Create button container (holds both buttons)
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'button-container';
-    this.renderDropdown.appendChild(buttonContainer);
-    
-    // Create and add render button
-    this.renderButton = document.createElement('button');
-    this.renderButton.className = 'render-button';
-    this.renderButton.textContent = 'Render MP4';
-    buttonContainer.appendChild(this.renderButton);
-    
-    // Create dropdown toggle button
-    this.dropdownToggle = document.createElement('button');
-    this.dropdownToggle.className = 'dropdown-toggle';
-    this.dropdownToggle.innerHTML = '▼';
-    buttonContainer.appendChild(this.dropdownToggle);
-    
-    // Create render options dropdown
-    this.renderOptions = document.createElement('div');
-    this.renderOptions.className = 'render-options';
-    this.renderDropdown.appendChild(this.renderOptions);
-    
-    // Get available formats
-    const availableFormats = getAvailableFormats();
-    
-    // Add MP4 option
-    const mp4Option = document.createElement('div');
-    mp4Option.className = 'render-option selected';
-    mp4Option.textContent = 'MP4 Video';
-    mp4Option.dataset.format = 'mp4';
-    this.renderOptions.appendChild(mp4Option);
-    
-    // Add ZIP option
-    const zipOption = document.createElement('div');
-    zipOption.className = 'render-option';
-    zipOption.textContent = 'PNG Sequence (ZIP)';
-    zipOption.dataset.format = 'zip';
-    this.renderOptions.appendChild(zipOption);
-    
-    // Add Node MP4 option if available
-    if (availableFormats.includes('node_mp4')) {
-      const nodeOption = document.createElement('div');
-      nodeOption.className = 'render-option';
-      nodeOption.textContent = 'Server MP4 (faster)';
-      nodeOption.dataset.format = 'node_mp4';
-      this.renderOptions.appendChild(nodeOption);
+    // Only add rendering controls if enabled
+    if (this.options.enableRendering) {
+      // Create render dropdown container
+      this.renderDropdown = document.createElement('div');
+      this.renderDropdown.className = 'render-dropdown';
+      container.appendChild(this.renderDropdown);
+      
+      // Create button container (holds both buttons)
+      const buttonContainer = document.createElement('div');
+      buttonContainer.className = 'button-container';
+      this.renderDropdown.appendChild(buttonContainer);
+      
+      // Create and add render button
+      this.renderButton = document.createElement('button');
+      this.renderButton.className = 'render-button';
+      this.renderButton.textContent = 'Render MP4';
+      buttonContainer.appendChild(this.renderButton);
+      
+      // Create dropdown toggle button
+      this.dropdownToggle = document.createElement('button');
+      this.dropdownToggle.className = 'dropdown-toggle';
+      this.dropdownToggle.innerHTML = '▼';
+      buttonContainer.appendChild(this.dropdownToggle);
+      
+      // Create render options dropdown
+      this.renderOptions = document.createElement('div');
+      this.renderOptions.className = 'render-options';
+      this.renderDropdown.appendChild(this.renderOptions);
+      
+      // Get available formats
+      const availableFormats = getAvailableFormats();
+      
+      // Add MP4 option
+      const mp4Option = document.createElement('div');
+      mp4Option.className = 'render-option selected';
+      mp4Option.textContent = 'MP4 Video';
+      mp4Option.dataset.format = 'mp4';
+      this.renderOptions.appendChild(mp4Option);
+      
+      // Add ZIP option
+      const zipOption = document.createElement('div');
+      zipOption.className = 'render-option';
+      zipOption.textContent = 'PNG Sequence (ZIP)';
+      zipOption.dataset.format = 'zip';
+      this.renderOptions.appendChild(zipOption);
+      
+      // Add Node MP4 option if available
+      if (availableFormats.includes('node_mp4')) {
+        const nodeOption = document.createElement('div');
+        nodeOption.className = 'render-option';
+        nodeOption.textContent = 'Server MP4 (faster)';
+        nodeOption.dataset.format = 'node_mp4';
+        this.renderOptions.appendChild(nodeOption);
+      }
+      
+      // Create progress container
+      this.progressContainer = document.createElement('div');
+      this.progressContainer.className = 'progress-container';
+      container.appendChild(this.progressContainer);
+      
+      this.progressBar = document.createElement('div');
+      this.progressBar.className = 'progress-bar';
+      this.progressContainer.appendChild(this.progressBar);
     }
-    
-    // Create progress container
-    this.progressContainer = document.createElement('div');
-    this.progressContainer.className = 'progress-container';
-    container.appendChild(this.progressContainer);
-    
-    this.progressBar = document.createElement('div');
-    this.progressBar.className = 'progress-bar';
-    this.progressContainer.appendChild(this.progressBar);
     
     // Set up event listeners
     this.setupEventListeners();
@@ -268,7 +337,7 @@ export default class Mation {
       if (!this.scene) return;
       if (this.isDragging) {
         this.isDragging = false;
-        
+
         // Disable default layer only mode when done dragging
         this.scene.setForceDefaultLayerOnly(false);
 
@@ -401,7 +470,7 @@ export default class Mation {
     
     this.scene?.canvas?.addEventListener('mouseup', () => {
       isPanning = false;
-      this.scene.setForceDefaultLayerOnly(false);
+      this.scene?.setForceDefaultLayerOnly(false);
     });
     
     // Touch-based panning with two fingers
@@ -477,112 +546,116 @@ export default class Mation {
       }
     }, { passive: false });
 
-    // Dropdown toggle button
-    this.dropdownToggle?.addEventListener('click', () => {
-      if (this.isRendering) return;
-      
-      if (this.renderOptions) {
-        this.renderOptions.classList.toggle('visible');
-      }
-    });
-    
-    // Render option selection
-    this.renderOptions?.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement;
-      if (target.classList.contains('render-option')) {
-        // Update selected format
-        const format = target.dataset.format as OutputFormat;
-        this.selectedFormat = format;
+    // Only set up rendering-related event listeners if rendering is enabled
+    if (this.options.enableRendering) {
+      // Dropdown toggle button
+      this.dropdownToggle?.addEventListener('click', () => {
+        if (this.isRendering) return;
         
-        // Update UI
-        const options = this.renderOptions?.querySelectorAll('.render-option');
-        options?.forEach(option => option.classList.remove('selected'));
-        target.classList.add('selected');
-        
-        // Update button text
-        if (this.renderButton) {
-          if (format === 'mp4') {
-            this.renderButton.textContent = 'Render MP4';
-          } else if (format === 'zip') {
-            this.renderButton.textContent = 'Render PNGs';
-          } else if (format === 'node_mp4') {
-            this.renderButton.textContent = 'Render Server MP4';
-          }
+        if (this.renderOptions) {
+          this.renderOptions.classList.toggle('visible');
         }
-        
-        // Hide dropdown
-        this.renderOptions?.classList.remove('visible');
-      }
-    });
-    
-    // Close dropdown when clicking elsewhere
-    document.addEventListener('click', (event) => {
-      if (this.renderOptions?.classList.contains('visible') && 
-          this.dropdownToggle && 
-          !(event.target === this.dropdownToggle || this.dropdownToggle.contains(event.target as Node)) &&
-          !(event.target === this.renderOptions || this.renderOptions.contains(event.target as Node))) {
-        this.renderOptions.classList.remove('visible');
-      }
-    });
-    
-    // Start rendering with main button
-    this.renderButton?.addEventListener('click', async () => {
-      if (!this.scene || this.isRendering || !this.renderButton || !this.progressContainer || !this.progressBar) return;
-
-      // Hide dropdown if visible
-      if (this.renderOptions?.classList.contains('visible')) {
-        this.renderOptions.classList.remove('visible');
-      }
-
-      this.isRendering = true;
-      this.renderButton.disabled = true;
-      this.renderButton.textContent = 'Rendering...';
-      this.progressContainer.classList.add('visible');
-      this.progressBar.style.width = '0%';
-
-      try {
-        await renderToVideo(this.scene, {
-          onProgress: (progress) => {
-            if (this.progressBar) this.progressBar.style.width = `${progress * 100}%`;
-          },
-          outputFormat: this.selectedFormat
-        });
-
-        // Success
-        if (this.renderButton) this.renderButton.textContent = 'Render Complete!';
-        setTimeout(() => {
+      });
+      
+      // Render option selection
+      this.renderOptions?.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement;
+        if (target.classList.contains('render-option')) {
+          // Update selected format
+          const format = target.dataset.format as OutputFormat;
+          this.selectedFormat = format;
+          
+          // Update UI
+          const options = this.renderOptions?.querySelectorAll('.render-option');
+          options?.forEach(option => option.classList.remove('selected'));
+          target.classList.add('selected');
+          
+          // Update button text
           if (this.renderButton) {
-            if (this.selectedFormat === 'mp4') {
+            if (format === 'mp4') {
               this.renderButton.textContent = 'Render MP4';
-            } else if (this.selectedFormat === 'zip') {
+            } else if (format === 'zip') {
               this.renderButton.textContent = 'Render PNGs';
-            } else if (this.selectedFormat === 'node_mp4') {
+            } else if (format === 'node_mp4') {
               this.renderButton.textContent = 'Render Server MP4';
             }
-            this.renderButton.disabled = false;
           }
-          if (this.progressContainer) this.progressContainer.classList.remove('visible');
-        }, 3000);
-      } catch (error) {
-        console.error('Rendering failed:', error);
-        if (this.renderButton) this.renderButton.textContent = 'Render Failed';
-        setTimeout(() => {
-          if (this.renderButton) {
-            if (this.selectedFormat === 'mp4') {
-              this.renderButton.textContent = 'Render MP4';
-            } else if (this.selectedFormat === 'zip') {
-              this.renderButton.textContent = 'Render PNGs';
-            } else if (this.selectedFormat === 'node_mp4') {
-              this.renderButton.textContent = 'Render Server MP4';
-            }
-            this.renderButton.disabled = false;
-          }
-          if (this.progressContainer) this.progressContainer.classList.remove('visible');
-        }, 3000);
-      }
+          
+          // Hide dropdown
+          this.renderOptions?.classList.remove('visible');
+        }
+      });
+      
+      // Close dropdown when clicking elsewhere
+      document.addEventListener('click', (event) => {
+        if (this.renderOptions?.classList.contains('visible') && 
+            this.dropdownToggle && 
+            !(event.target === this.dropdownToggle || this.dropdownToggle.contains(event.target as Node)) &&
+            !(event.target === this.renderOptions || this.renderOptions.contains(event.target as Node))) {
+          this.renderOptions.classList.remove('visible');
+        }
+      });
+      
+      // Start rendering with main button
+      this.renderButton?.addEventListener('click', async () => {
+        if (!this.scene || this.isRendering || !this.renderButton || !this.progressContainer || !this.progressBar) return;
 
-      this.isRendering = false;
-    });
+        // Hide dropdown if visible
+        if (this.renderOptions?.classList.contains('visible')) {
+          this.renderOptions.classList.remove('visible');
+        }
+
+        this.isRendering = true;
+        this.renderButton.disabled = true;
+        this.renderButton.textContent = 'Rendering...';
+        this.progressContainer.classList.add('visible');
+        this.progressBar.style.width = '0%';
+
+        try {
+          await renderToVideo(this.scene, {
+            onProgress: (progress) => {
+              if (this.progressBar) this.progressBar.style.width = `${progress * 100}%`;
+            },
+            outputFormat: this.selectedFormat,
+            libraryConfig: this.options.libraryConfig
+          });
+
+          // Success
+          if (this.renderButton) this.renderButton.textContent = 'Render Complete!';
+          setTimeout(() => {
+            if (this.renderButton) {
+              if (this.selectedFormat === 'mp4') {
+                this.renderButton.textContent = 'Render MP4';
+              } else if (this.selectedFormat === 'zip') {
+                this.renderButton.textContent = 'Render PNGs';
+              } else if (this.selectedFormat === 'node_mp4') {
+                this.renderButton.textContent = 'Render Server MP4';
+              }
+              this.renderButton.disabled = false;
+            }
+            if (this.progressContainer) this.progressContainer.classList.remove('visible');
+          }, 3000);
+        } catch (error) {
+          console.error('Rendering failed:', error);
+          if (this.renderButton) this.renderButton.textContent = 'Render Failed';
+          setTimeout(() => {
+            if (this.renderButton) {
+              if (this.selectedFormat === 'mp4') {
+                this.renderButton.textContent = 'Render MP4';
+              } else if (this.selectedFormat === 'zip') {
+                this.renderButton.textContent = 'Render PNGs';
+              } else if (this.selectedFormat === 'node_mp4') {
+                this.renderButton.textContent = 'Render Server MP4';
+              }
+              this.renderButton.disabled = false;
+            }
+            if (this.progressContainer) this.progressContainer.classList.remove('visible');
+          }, 3000);
+        }
+
+        this.isRendering = false;
+      });
+    }
   }
 
   private updateTimeDisplay(currentTime: number, totalDuration: number) {
