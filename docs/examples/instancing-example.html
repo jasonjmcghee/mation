@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mation WebGL Instancing Example</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    #preview {
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    p {
+      text-align: center;
+      color: #666;
+      max-width: 800px;
+      margin: 0 auto 20px;
+    }
+  </style>
+  <!-- Include required library files -->
+  <script type="module" src="../mation.js"></script>
+</head>
+<body>
+  <h1>WebGL Instancing Example</h1>
+  <p>This example demonstrates using instancing to render many particles efficiently.</p>
+  <div id="preview"></div>
+
+  <script type="module">
+    import { createPipeline } from '../mation.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const app = document.querySelector("#preview");
+      if (!app) return;
+
+      // Create canvas and set up dimensions
+      const canvas = document.createElement("canvas");
+      const width = 800;
+      const height = 450;
+      canvas.width = width;
+      canvas.height = height;
+      app.append(canvas);
+      
+      // Create WebGL pipeline
+      const pipeline = createPipeline(canvas);
+      
+      // Number of instances (particles)
+      const numParticles = 5000;
+      
+      // Create instance data
+      const positions = new Float32Array(numParticles * 2);
+      const colors = new Float32Array(numParticles * 3);
+      const scales = new Float32Array(numParticles);
+      
+      // Initialize particles with random positions, colors, and scales
+      for (let i = 0; i < numParticles; i++) {
+        // Random position
+        positions[i * 2] = Math.random() * 2 - 1;     // x: -1 to 1
+        positions[i * 2 + 1] = Math.random() * 2 - 1; // y: -1 to 1
+        
+        // Random color
+        colors[i * 3] = Math.random();     // r: 0 to 1
+        colors[i * 3 + 1] = Math.random(); // g: 0 to 1
+        colors[i * 3 + 2] = Math.random(); // b: 0 to 1
+        
+        // Random scale
+        scales[i] = Math.random() * 0.05 + 0.01; // 0.01 to 0.06
+      }
+      
+      // Define instance attributes
+      const instanceAttributes = {
+        a_offset: { data: positions, itemSize: 2 },
+        a_color: { data: colors, itemSize: 3 },
+        a_scale: { data: scales, itemSize: 1 }
+      };
+      
+      // Define vertex shader
+      const vertexShader = `in vec2 position;
+      in vec2 a_offset;
+      in vec3 a_color;
+      in float a_scale;
+      
+      out vec3 v_color;
+      out vec2 vUv;
+      
+      uniform float u_time;
+      
+      void main() {
+        // Scale the quad
+        vec2 scaledPosition = position * a_scale;
+        
+        // Apply a simple animation based on time
+        float angle = u_time * 0.5 + length(a_offset) * 3.0;
+        float dist = length(a_offset) * 0.5;
+        
+        // Create orbital motion
+        vec2 orbital = vec2(
+          cos(angle) * dist,
+          sin(angle) * dist
+        );
+        
+        // Combine static position with animation
+        vec2 finalPosition = scaledPosition + a_offset + orbital * 0.3;
+        
+        // Set position
+        gl_Position = vec4(finalPosition, 0.0, 1.0);
+        
+        // Pass color to fragment shader
+        v_color = a_color;
+        
+        // Texture coordinates for the quad
+        vUv = 0.5 * (position + 1.0);
+      }`;
+      
+      // Define fragment shader
+      const fragmentShader = `in vec3 v_color;
+      in vec2 vUv;
+      out vec4 fragColor;
+      
+      void main() {
+        // Calculate distance from center for circle shape
+        float dist = length(vUv - 0.5) * 2.0;
+        
+        // Create soft circle with gradient
+        float alpha = 1.0 - smoothstep(0.8, 1.0, dist);
+        
+        // Apply color with alpha
+        fragColor = vec4(v_color, alpha);
+      }`;
+      
+      // Initialize shader program with instancing
+      const { render, uniforms } = pipeline.add({
+        fragmentShader,
+        vertexShader,
+        uniforms: { u_time: 0.0 },
+        instanceAttributes,
+        numInstances: numParticles
+      });
+      
+      // Animation loop
+      let lastTime = 0;
+      function animate(time) {
+        const deltaTime = time - lastTime;
+        lastTime = time;
+        
+        // Update time uniform
+        uniforms.u_time += deltaTime * 0.001;
+        
+        // Render the scene
+        render();
+        
+        // Continue animation loop
+        requestAnimationFrame(animate);
+      }
+      
+      // Start animation
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>

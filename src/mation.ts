@@ -309,6 +309,8 @@ export default class Mation {
       
       // Reset pan to [0, 0]
       this.scene.setPan([0, 0]);
+
+      this.scene.setPerformingPreviewAction(false);
     });
 
     // Scrubber handlers
@@ -319,7 +321,7 @@ export default class Mation {
       this.scene.pause();
       
       // Enable default layer only mode while dragging
-      this.scene.setForceDefaultLayerOnly(true);
+      this.scene.setPerformingPreviewAction(true);
     });
 
     this.scrubber?.addEventListener('touchstart', () => {
@@ -329,7 +331,7 @@ export default class Mation {
       this.scene.pause();
       
       // Enable default layer only mode while dragging
-      this.scene.setForceDefaultLayerOnly(true);
+      this.scene.setPerformingPreviewAction(true);
     });
 
     // These must remain on document to catch events outside the canvas
@@ -339,7 +341,7 @@ export default class Mation {
         this.isDragging = false;
 
         // Disable default layer only mode when done dragging
-        this.scene.setForceDefaultLayerOnly(false);
+        this.scene.setPerformingPreviewAction(false);
 
         if (this.wasPlayingBeforeDrag) {
           this.scene.play();
@@ -355,7 +357,7 @@ export default class Mation {
         this.isDragging = false;
         
         // Disable default layer only mode when done dragging
-        this.scene.setForceDefaultLayerOnly(false);
+        this.scene.setPerformingPreviewAction(false);
 
         if (this.wasPlayingBeforeDrag) {
           this.scene.play();
@@ -419,9 +421,9 @@ export default class Mation {
 
       // Apply the new zoom - this will use queueRender internally
       this.scene.setZoom(newZoom);
-      
+
       // Enable force default layer only while zooming
-      this.scene.setForceDefaultLayerOnly(true);
+      this.scene.setPerformingPreviewAction(true);
       
       // Clear any existing timeout
       if (wheelTimeout !== null) {
@@ -432,7 +434,7 @@ export default class Mation {
       wheelTimeout = window.setTimeout(() => {
         // Set force default layer to false when zooming stops
         if (this.scene) {
-          this.scene.setForceDefaultLayerOnly(false);
+          this.scene.setPerformingPreviewAction(false);
         }
         wheelTimeout = null;
       }, 200); // 200ms debounce time
@@ -448,6 +450,7 @@ export default class Mation {
 
       // Only start panning if Alt key is pressed
       if (event.altKey) {
+        this.scene.setPerformingPreviewAction(true);
         isPanning = true;
         lastX = event.clientX;
         lastY = event.clientY;
@@ -470,7 +473,7 @@ export default class Mation {
     
     this.scene?.canvas?.addEventListener('mouseup', () => {
       isPanning = false;
-      this.scene?.setForceDefaultLayerOnly(false);
+      this.scene?.setPerformingPreviewAction(false);
     });
     
     // Touch-based panning with two fingers

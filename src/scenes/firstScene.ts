@@ -1,7 +1,7 @@
 import { Scene, Layer } from "../animation.ts";
 import { Path } from "polymorph-js";
 import { Easing } from "../easings.ts";
-import { buildWebGlPipeline } from "../webgl.ts";
+import { createPipeline } from "../webgl.ts";
 import { curvePath } from "../assets/firstSceneAssets.ts";
 
 const polygonLayerShader = {
@@ -25,7 +25,7 @@ void main() {
 export class FirstScene extends Scene {
   setupLayers() {
     // Create curve layer with its own pipeline
-    const curvePipeline = buildWebGlPipeline(this.canvas);
+    const curvePipeline = createPipeline(this.canvas);
     const resolution = [this.width, this.height];
     const {
       render: seedRender, renderTargets: seedRenderTargets
@@ -412,9 +412,9 @@ void main() {
     },
       {
         ignorePanZoom: true,
-      extras: {
-        uniforms: curveUniforms,
-      },
+        extras: {
+          uniforms: curveUniforms,
+        },
     });
 
     const seedLayer = new Layer(
@@ -431,7 +431,7 @@ void main() {
         width: this.width * 0.125,
         height: this.height * 0.75,
         isSubview: true,
-        renderWhenScrubbing: true,
+        renderDuringPreviewAction: true,
       }
     );
 
@@ -477,7 +477,7 @@ void main() {
         width: this.width * 0.125,
         height: this.height * 0.75,
         isSubview: true,
-        renderWhenScrubbing: true,
+        renderDuringPreviewAction: true,
       }
     );
 
@@ -528,12 +528,12 @@ void main() {
         width: this.width * 0.125,
         height: this.height * 0.75,
         isSubview: true,
-        renderWhenScrubbing: true,
+        renderDuringPreviewAction: true,
       }
     );
 
     // Create polygon layer with its own pipeline
-    const polygonPipeline = buildWebGlPipeline(this.canvas);
+    const polygonPipeline = createPipeline(this.canvas);
     const polygonPipelineResult = polygonPipeline.add(polygonLayerShader);
     const polygonLayer = new Layer(
       'polygon-layer',

@@ -5,7 +5,7 @@ export default defineConfig({
   assetsInclude: ['**/*.wasm'],
   base: './',
   build: {
-    outDir: 'dist',
+    outDir: 'docs',
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Mation',

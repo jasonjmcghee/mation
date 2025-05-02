@@ -13,12 +13,11 @@
     }
     #preview {
       margin: 0 auto;
-      max-width: 1000px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      background-color: #fff;
     }
     canvas {
       display: block;
@@ -28,14 +27,14 @@
     }
   </style>
   <!-- Include required library files -->
-  <script type="module" src="../dist/mation.js"></script>
+  <script type="module" src="../mation.js"></script>
 </head>
 <body>
   <div id="preview"></div>
 
   <script type="module">
     // Import Mation from the library
-    import { Mation, Scene, Easing } from '../dist/mation.js';
+    import { Mation, Scene, Easing } from '../mation.js';
 
     // Create a simple inline scene that extends the Scene class
     class SimpleScene extends Scene {

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mation GI Instancing Example</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    #preview {
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    p {
+      text-align: center;
+      color: #666;
+      max-width: 800px;
+      margin: 0 auto 20px;
+    }
+  </style>
+  <!-- Include required library files -->
+  <script type="module" src="../mation.js"></script>
+</head>
+<body>
+  <h1>WebGL Instancing with GI Lighting Example</h1>
+  <p>This example demonstrates using instancing to render many tiny dots with GI lighting.</p>
+  <div id="preview"></div>
+
+  <script type="module">
+    import { Mation, Scene, createPipeline, Layer } from '../mation.js';
+
+    class DotsScene extends Scene {
+      setupLayers() {
+        const { width, height } = this.canvas;
+        const pipeline = createPipeline(this.canvas);
+        
+        // Number of instances (particles)
+        const numParticles = 3000;
+        
+        // Create instance data
+        const positions = new Float32Array(numParticles * 2);
+        const colors = new Float32Array(numParticles * 3);
+        const scales = new Float32Array(numParticles);
+        const velocities = new Float32Array(numParticles * 2);
+        
+        // Initialize particles with random positions, colors, and scales
+        for (let i = 0; i < numParticles; i++) {
+          // Random position
+          positions[i * 2] = Math.random() * 2 - 1;     // x: -1 to 1
+          positions[i * 2 + 1] = Math.random() * 2 - 1; // y: -1 to 1
+          
+          // Random velocity for bounce effect
+          velocities[i * 2] = (Math.random() * 0.2 - 0.1);     // vx: -0.1 to 0.1
+          velocities[i * 2 + 1] = (Math.random() * 0.2 - 0.1); // vy: -0.1 to 0.1
+          
+          // Make all dots the same size for perfect circles
+          scales[i] = 0.015; // Fixed size for all dots
+          
+          // 10% black, 90% random colors
+          if (i < numParticles * 0.1) {
+            // Black dots
+            colors[i * 3] = 0;     // r: 0
+            colors[i * 3 + 1] = 0; // g: 0
+            colors[i * 3 + 2] = 0; // b: 0
+          } else {
+            // Random color
+            colors[i * 3] = Math.random();     // r: 0 to 1
+            colors[i * 3 + 1] = Math.random(); // g: 0 to 1
+            colors[i * 3 + 2] = Math.random(); // b: 0 to 1
+          }
+        }
+        
+        // Define instance attributes
+        const instanceAttributes = {
+          a_offset: { data: positions, itemSize: 2 },
+          a_color: { data: colors, itemSize: 3 },
+          a_scale: { data: scales, itemSize: 1 },
+          a_velocity: { data: velocities, itemSize: 2 }
+        };
+        
+        // Define vertex shader for particles
+        const vertexShader = `in vec2 position;
+        in vec2 a_offset;
+        in vec3 a_color;
+        in float a_scale;
+        in vec2 a_velocity;
+        
+        out vec3 v_color;
+        out vec2 vUv;
+        
+        uniform float u_time;
+        
+        void main() {
+          // For perfect circles, ensure uniform scaling
+          vec2 scaledPosition = position * a_scale;
+          
+          // Animation based on time and velocity (10 second loop)
+          float t = mod(u_time, 10.0);
+
+          vec2 velocity = a_velocity * vec2(10.0);
+          
+          // Calculate new position with bounce effect
+          vec2 newPos = a_offset + velocity * t;
+          
+          // Ensure the dots bounce off the walls
+          newPos.x = newPos.x > 0.95 || newPos.x < -0.95 ? a_offset.x - velocity.x * t : newPos.x;
+          newPos.y = newPos.y > 0.95 || newPos.y < -0.95 ? a_offset.y - velocity.y * t : newPos.y;
+          
+          // Final position
+          vec2 finalPosition = scaledPosition + newPos;
+          
+          // Set position
+          gl_Position = vec4(finalPosition, 0.0, 1.0);
+          
+          // Pass color to fragment shader
+          v_color = a_color;
+          
+          // Texture coordinates for the quad
+          vUv = 0.5 * (position + 1.0);
+        }`;
+        
+        // Define fragment shader for SDF circles
+        const fragmentShader = `in vec3 v_color;
+        in vec2 vUv;
+        out vec4 fragColor;
+        vec2 resolution;
+
+        void main() {
+          // Calculate aspect ratio
+          float aspect = resolution.x / resolution.y;
+
+          // Adjust UV coordinates to account for aspect ratio
+          vec2 center = vec2(0.5, 0.5);
+          vec2 uv = vUv - center;
+
+          // Calculate distance from center with aspect ratio correction
+          float dist = length(uv);
+
+          // Hard-edged circle using step for a crisp edge with no border
+          float circle = step(dist, 0.1);
+
+          // Apply color with binary alpha (no anti-aliasing for crisp edges)
+          fragColor = vec4(v_color, circle);
+        }`;
+        
+        // Initialize shader program with instancing
+        const { uniforms: particleUniforms, render: particleRender, renderTargets: particleRenderTargets } = pipeline.add({
+          fragmentShader,
+          vertexShader,
+          uniforms: { u_time: 0.0 },
+          instanceAttributes,
+          numInstances: numParticles
+        }, {
+          internalFormat: pipeline.gl().RGBA32F,
+          format: pipeline.gl().RGBA,
+          type: pipeline.gl().FLOAT,
+        });
+
+        // Calculate the number of passes needed for Jump Flooding Algorithm
+        const passes = Math.ceil(Math.log2(Math.max(width, height))) + 1;
+        
+        // Create JFA seed layer - marks the particle locations
+        const { render: seedRender, renderTargets: seedRenderTargets } = pipeline.add({
+          fragmentShader: `
+          uniform sampler2D surfaceTexture;
+          uniform vec2 resolution;
+          out vec4 FragColor;
+
+          in vec2 vUv;
+
+          void main() {
+            float alpha = texelFetch(surfaceTexture, ivec2(gl_FragCoord.x, gl_FragCoord.y), 0).a;
+            FragColor = vec4(vUv * round(alpha), 0.0, 1.0);
+          }`,
+          uniforms: {
+            resolution: [width, height],
+            surfaceTexture: null,
+          }
+        }, {
+          internalFormat: pipeline.gl().RGBA32F,
+          format: pipeline.gl().RGBA,
+          type: pipeline.gl().FLOAT,
+        });
+
+        // Create Jump Flooding Algorithm for distance field
+        const { render: jfaRender, renderTargets: jfaRenderTargets, uniforms: jfaUniforms } = pipeline.add({
+          fragmentShader: `
+          uniform vec2 oneOverSize;
+          uniform vec2 resolution;
+          uniform sampler2D inputTexture;
+          uniform float uOffset;
+          uniform int direction;
+          uniform bool skip;
+          uniform int passes;
+
+          const int MAX_TILE_SIZE = 32;
+
+          const float SQRT_2 = 1.41;
+
+          in vec2 vUv;
+          out vec4 FragColor;
+
+          void classic() {
+            if (skip) {
+              FragColor = vec4(vUv, 0.0, 1.0);
+            } else {
+              vec2 nearestSeed = vec2(-1.0);
+              float nearestDist = 999999.9;
+              vec2 pre = uOffset * oneOverSize;
+
+              // Start with the center to try to appeal to loading in a block
+              vec2 sampleUV = vUv;
+
+              // Check if the sample is within bounds
+              vec2 sampleValue = texture(inputTexture, sampleUV).xy;
+              vec2 sampleSeed = sampleValue.xy;
+
+              if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
+                vec2 diff = sampleSeed - vUv;
+                float dist = dot(diff, diff);
+                if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearestSeed.xy = sampleValue.xy;
+                }
+              }
+
+              // Then do the rest
+              for (float y = -1.0; y <= 1.0; y += 1.0) {
+                for (float x = -1.0; x <= 1.0; x += 1.0) {
+                  if (x == 0.0 && y == 0.0) { continue; }
+                  vec2 sampleUV = vUv + vec2(x, y) * pre;
+
+                  // Check if the sample is within bounds
+                  if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) { continue; }
+
+                    vec2 sampleValue = texture(inputTexture, sampleUV).xy;
+                    vec2 sampleSeed = sampleValue.xy;
+
+                    if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
+                      vec2 diff = sampleSeed - vUv;
+                      float dist = dot(diff, diff);
+                      if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearestSeed.xy = sampleValue.xy;
+                      }
+                    }
+                }
+              }
+
+              FragColor = vec4(nearestSeed, 0.0, 1.0);
+            }
+          }
+
+          void main() {
+            classic();
+          }`,
+          uniforms: {
+            inputTexture: null,
+            resolution: [width, height],
+            oneOverSize: [1.0 / width, 1.0 / height],
+            uOffset: Math.pow(2, passes - 1),
+            direction: 0,
+            passes: passes,
+            skip: true,
+          }
+        }, {
+          internalFormat: pipeline.gl().RGBA32F,
+          format: pipeline.gl().RGBA,
+          type: pipeline.gl().FLOAT,
+        });
+
+        // Distance field calculation
+        const { render: dfRender, renderTargets: dfRenderTargets } = pipeline.add({
+          uniforms: {
+            resolution: [width, height],
+            jfaTexture: null,
+            surfaceTexture: null,
+          },
+          fragmentShader: `
+          uniform sampler2D jfaTexture;
+          uniform sampler2D surfaceTexture;
+          uniform vec2 resolution;
+
+          in vec2 vUv;
+          out vec4 FragColor;
+
+          void main() {
+            ivec2 texel = ivec2(vUv.x * resolution.x, vUv.y * resolution.y);
+            vec2 nearestSeed = texelFetch(jfaTexture, texel, 0).xy;
+            float dist = clamp(distance(vUv, nearestSeed), 0.0, 1.0);
+
+            // Normalize and visualize the distance
+            FragColor = vec4(dist, 0.0, 0.0, 1.0);
+          }`,
+        });
+
+        // Global illumination shader
+        const { renderTargets: giRenderTargets, render: giRender, uniforms: giUniforms } = pipeline.add({
+          uniforms: {
+            resolution: [width, height],
+            oneOverSize: [1.0 / width, 1.0 / height],
+            sceneTexture: null,
+            distanceTexture: null,
+            rayCount: 64,
+            maxSteps: 80,
+            sunAngle: 0.4,
+            enableSun: false,
+            showGrain: false,
+            showNoise: true,
+          },
+          fragmentShader: `
+uniform int rayCount;
+uniform float sunAngle;
+uniform bool showNoise;
+uniform bool showGrain;
+uniform bool enableSun;
+uniform vec2 oneOverSize;
+uniform int maxSteps;
+
+uniform sampler2D sceneTexture;
+uniform sampler2D distanceTexture;
+
+out vec4 FragColor;
+in vec2 vUv;
+
+const float PI = 3.14159265;
+const float TAU = 2.0 * PI;
+const float ONE_OVER_TAU = 1.0 / TAU;
+const float PAD_ANGLE = 0.01;
+const float EPS = 0.001f;
+
+const vec3 skyColor = vec3(0.02, 0.08, 0.2);
+const vec3 sunColor = vec3(0.95, 0.95, 0.9);
+const float goldenAngle = PI * 0.7639320225;
+
+// Popular rand function
+float rand(vec2 co) {
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+vec3 sunAndSky(float rayAngle) {
+    // Get the sun / ray relative angle
+    float angleToSun = mod(rayAngle - sunAngle, TAU);
+
+    // Sun falloff based on the angle
+    float sunIntensity = smoothstep(1.0, 0.0, angleToSun);
+
+    // And that's our sky radiance
+    return sunColor * sunIntensity + skyColor;
+}
+
+bool outOfBounds(vec2 uv) {
+    return uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0;
+}
+
+void main() {
+    vec2 uv = vUv;
+
+    vec4 light = texture(sceneTexture, uv);
+
+    vec4 radiance = vec4(0.0);
+
+    float oneOverRayCount = 1.0 / float(rayCount);
+    float angleStepSize = TAU * oneOverRayCount;
+
+    float coef = 0.0;
+    float offset = showNoise ? rand(uv + coef) : 0.0;
+    float rayAngleStepSize = showGrain ? angleStepSize + offset * TAU : angleStepSize;
+    float minStepSize = min(oneOverSize.x, oneOverSize.y);
+
+    // Not light source or occluder
+    if (light.a < 0.1) {
+        // Shoot rays in "rayCount" directions, equally spaced, with some randomness.
+        for(int i = 0; i < rayCount; i++) {
+            float angle = rayAngleStepSize * (float(i) + offset) + sunAngle;
+            vec2 rayDirection = vec2(cos(angle), -sin(angle));
+
+            vec2 sampleUv = uv;
+            vec4 radDelta = vec4(0.0);
+            bool hitSurface = false;
+
+            // We tested uv already (we know we aren't an object), so skip step 0.
+            for (int step = 1; step < maxSteps; step++) {
+                // How far away is the nearest object?
+                float dist = texture(distanceTexture, sampleUv).r;
+
+                // Go the direction we're traveling (with noise)
+                sampleUv += rayDirection * dist;
+
+                if (outOfBounds(sampleUv)) break;
+
+                if (dist <= minStepSize) {
+                    vec4 sampleColor = texture(sceneTexture, sampleUv);
+                    radDelta += sampleColor;
+                    hitSurface = true;
+                    break;
+                }
+            }
+
+            // If we didn't find an object, add some sky + sun color
+            if (!hitSurface && enableSun) {
+                radDelta += vec4(sunAndSky(angle), 1.0);
+            }
+
+            // Accumulate total radiance
+            radiance += radDelta;
+        }
+    } else if (length(light.rgb) >= 0.1) {
+        radiance = light;
+    }
+
+    // Bring up all the values to have an alpha of 1.0.
+    vec4 finalRadiance = vec4(max(light, radiance * oneOverRayCount).rgb, 1.0);
+    FragColor = finalRadiance;
+}`,
+        });
+
+        // Add basic anti-banding
+        const { render: debandingRender } = pipeline.add({
+          fragmentShader: `
+// This shader reduces color banding by adding controlled noise to smooth gradients
+
+uniform sampler2D inputTexture;
+uniform float noiseAmount;
+uniform float ditherRange; // Range of colors to analyze for banding
+uniform vec2 resolution;
+
+in vec2 vUv;
+out vec4 FragColor;
+
+float random(vec2 coords) {
+    return fract(sin(dot(coords.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+void main() {
+    vec2 uv = vUv;
+    
+    // Sample the original color
+    vec4 originalColor = texture(inputTexture, uv);
+    
+    // Generate controlled noise based on position
+    // This helps break up banding patterns
+    vec3 noise = vec3(
+        random(uv + 0.07 * fract(vec2(1.0, 0.0))),
+        random(uv + 0.07 * fract(vec2(0.0, 1.0))),
+        random(uv + 0.07 * fract(vec2(1.0, 1.0)))
+    );
+    
+    // Remap noise from [0,1] to [-0.5,0.5]
+    noise = noise - 0.5;
+    
+    // Apply noise only to smooth gradients
+    // First, sample neighboring pixels to detect gradients
+    vec4 neighbors[4];
+    neighbors[0] = texture(inputTexture, uv + vec2(1.0, 0.0) / resolution);
+    neighbors[1] = texture(inputTexture, uv + vec2(-1.0, 0.0) / resolution);
+    neighbors[2] = texture(inputTexture, uv + vec2(0.0, 1.0) / resolution);
+    neighbors[3] = texture(inputTexture, uv + vec2(0.0, -1.0) / resolution);
+    
+    // Calculate color differences
+    float colorDifference = 0.0;
+    for (int i = 0; i < 4; i++) {
+        colorDifference += distance(originalColor.rgb, neighbors[i].rgb);
+    }
+    colorDifference /= 4.0;
+    
+    // Apply more noise to areas with subtle gradient changes (where banding occurs)
+    // and less noise to areas with sharp changes or flat colors
+    float bandingDetection = 1.0 - smoothstep(0.0, ditherRange, colorDifference);
+    
+    // Apply the noise with intensity control
+    vec3 finalColor = originalColor.rgb + noise * noiseAmount * bandingDetection;
+    
+    // Output the processed color
+    FragColor = vec4(finalColor, originalColor.a);
+}`,
+          uniforms: {
+            inputTexture: null,
+            noiseAmount: 0.015,
+            ditherRange: 1.0,
+            resolution: [width, height],
+          }
+        });
+
+        // Create main rendering layer
+        const mainLayer = new Layer(
+          "mainLayer",
+          pipeline,
+          () => {
+            // Render particles to texture
+            particleRender({
+              renderTarget: particleRenderTargets[0],
+              uniforms: {
+                resolution: [width, height],
+              }
+            });
+            
+            // Start GI pipeline - generate seed points
+            seedRender({
+              renderTarget: seedRenderTargets[0],
+              uniforms: { surfaceTexture: particleRenderTargets[0].texture }
+            });
+            
+            // JFA to calculate Voronoi
+            let currentInput = seedRenderTargets[0].texture;
+            let [renderA, renderB] = jfaRenderTargets;
+            let currentOutput = renderA;
+            
+            for (let i = 0; i < passes; i++) {
+              const offset = Math.pow(2, passes - i - 1);
+              
+              jfaRender({
+                renderTarget: currentOutput,
+                uniforms: {
+                  skip: false,
+                  inputTexture: currentInput,
+                  uOffset: offset,
+                  direction: 0,
+                },
+              });
+              
+              currentInput = currentOutput.texture;
+              currentOutput = (currentOutput === renderA) ? renderB : renderA;
+            }
+            
+            // Calculate distance field
+            dfRender({
+              renderTarget: dfRenderTargets[0],
+              uniforms: {
+                jfaTexture: currentInput,
+                surfaceTexture: particleRenderTargets[0].texture,
+              }
+            });
+            
+            // Apply GI lighting
+            giRender({
+              renderTarget: giRenderTargets[0],
+              uniforms: {
+                distanceTexture: dfRenderTargets[0].texture,
+                sceneTexture: particleRenderTargets[0].texture,
+                sunAngle: 0.0,
+              }
+            });
+            
+            // Apply debanding
+            debandingRender({
+              uniforms: {
+                inputTexture: giRenderTargets[0].texture,
+              }
+            });
+          },
+          {
+            ignorePanZoom: true,
+            extras: {
+              uniforms: particleUniforms,
+            },
+          }
+        );
+
+        this.pushLayer(mainLayer);
+      }
+
+      *animationSequence() {
+        // Animation duration is handled in the vertex shader with 10-second loop
+        yield this.animate([
+          {
+            layer: "mainLayer",
+            draw(ctx, progress, {layers}) {
+              if (layers.mainLayer.extras) {
+                layers.mainLayer.extras.uniforms.u_time = progress;
+              }
+            }
+          }
+        ], { duration: 10 });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const app = document.querySelector("#preview");
+      if (!app) return;
+
+      // Create canvas
+      const canvas = document.createElement("canvas");
+      const width = 1920;
+      const height = 1080;
+      canvas.width = width;
+      canvas.height = height;
+      app.append(canvas);
+
+      // Create Mation instance
+      const mation = new Mation();
+
+      // Create and set the scene
+      const scene = new DotsScene({canvas, width, height});
+      mation.setScene(scene);
+
+      // Initialize Mation (this will create UI controls and start the animation)
+      await mation.initialize(app);
+    });
+  </script>
+</body>
+</html>

@@ -11,11 +11,18 @@ void main() {
     gl_Position = vec4(position, 0.0, 1.0);
 }`;
 
+export interface InstanceAttributeData {
+  data: Float32Array;
+  itemSize: number;
+}
+
 export interface MaterialProperties {
   fragmentShader: string;
   vertexShader?: string;
   uniforms: Record<string, any>;
   name?: string;
+  instanceAttributes?: Record<string, InstanceAttributeData>;
+  numInstances?: number;
 }
 
 interface Attribute {
@@ -23,8 +30,15 @@ interface Attribute {
   size: number;
 }
 
-interface Attributes {
-  [key: string]: Attribute;
+interface InstancedAttribute {
+  buffer: WebGLBuffer;
+  itemSize: number;
+}
+
+interface RenderAttributes {
+  position?: Attribute;
+  instanceAttributes?: Record<string, InstancedAttribute>;
+  numInstances?: number;
 }
 
 interface RenderTargetProps {
@@ -69,9 +83,12 @@ class Pass {
   private name: string;
   private w: WebGL2MicroLayer;
   uniforms: Record<string, any>;
+  private instancedAttributes: Record<string, InstancedAttribute>;
+  private numInstances: number;
+  private isInstanced: boolean;
 
   constructor(w: WebGL2MicroLayer, quad: Attribute, materialProperties: MaterialProperties) {
-    const {fragmentShader, vertexShader, uniforms, name} = materialProperties;
+    const {fragmentShader, vertexShader, uniforms, name, instanceAttributes, numInstances} = materialProperties;
     this.vertexShader = vertexShader ?? vertexShaderDefault;
     this.fragmentShader = fragmentShader;
     this.program = w.createProgram(
@@ -83,6 +100,14 @@ class Pass {
     this.name = name || '';
     w.programs.set(name || '', this.program);
     this.w = w;
+    this.instancedAttributes = {};
+    this.numInstances = numInstances || 1;
+    this.isInstanced = !!instanceAttributes && Object.keys(instanceAttributes).length > 0;
+  }
+
+  setInstanceAttribute(name: string, data: Float32Array, itemSize: number): void {
+    this.instancedAttributes[name] = this.w.createInstancedAttribute(data, itemSize);
+    this.isInstanced = true;
   }
 
   updateFragmentShader(fragmentShader: string): void {
@@ -109,11 +134,24 @@ class Pass {
     } else {
       this.w.setRenderTarget(null);
     }
-    this.w.render(
-      this.name,
-      this.uniforms,
-      {position: this.quad},
-    );
+
+    if (this.isInstanced) {
+      this.w.render(
+        this.name,
+        this.uniforms,
+        {
+          position: this.quad,
+          instanceAttributes: this.instancedAttributes,
+          numInstances: this.numInstances
+        },
+      );
+    } else {
+      this.w.render(
+        this.name,
+        this.uniforms,
+        {position: this.quad},
+      );
+    }
   }
 }
 
@@ -122,10 +160,14 @@ export class WebGLPipeline {
   private quad: Attribute;
   private passes: Record<string, Pass>;
 
-  constructor(w: WebGL2MicroLayer, quad: Attribute) {
+  constructor(w: WebGL2MicroLayer, quad: Attribute = w.createFullscreenQuad()) {
     this.w = w;
     this.quad = quad;
     this.passes = {};
+  }
+
+  createInstancedAttribute(data: Float32Array, itemSize: number): InstancedAttribute {
+    return this.w.createInstancedAttribute(data, itemSize);
   }
 
   add(
@@ -140,7 +182,7 @@ export class WebGLPipeline {
     const canvas = this.w.canvas;
     const width = this.w.canvas.width;
     const height = this.w.canvas.height;
-    
+
     // Set the viewport to match the canvas size
     w.gl.viewport(0, 0, canvas.width, canvas.height);
 
@@ -179,7 +221,7 @@ export class WebGLPipeline {
   }
 
   createPass(materialProperties: MaterialProperties): Pass {
-    const {name} = materialProperties;
+    const {name, instanceAttributes} = materialProperties;
     const passName = `pass-${Object.keys(this.passes).length}:-${name ?? ""}`;
     const pass = new Pass(
       this.w,
@@ -189,6 +231,14 @@ export class WebGLPipeline {
         name: passName,
       },
     );
+
+    // Set up any instance attributes that were provided
+    if (instanceAttributes) {
+      for (const [attrName, {data, itemSize}] of Object.entries(instanceAttributes)) {
+        pass.setInstanceAttribute(attrName, data, itemSize);
+      }
+    }
+
     this.passes[passName] = pass;
     return pass;
   }
@@ -226,6 +276,10 @@ export class WebGL2MicroLayer {
   public framebuffers: Map<string, FramebufferInfo>;
   public defaultRenderTargetProps: RenderTargetProps;
   public renderTargets: Record<string, RenderTarget>;
+  // Track the active attributes to ensure proper cleanup
+  private activeAttributes: Set<number> = new Set();
+  // Track the active instanced attributes to ensure proper cleanup
+  private activeInstancedAttributes: Set<number> = new Set();
 
   constructor(canvas: HTMLCanvasElement | OffscreenCanvas, extra?: {
     canvasScale?: number;
@@ -267,6 +321,13 @@ export class WebGL2MicroLayer {
       type: this.gl.HALF_FLOAT
     };
     this.renderTargets = {};
+    
+    // Initialize WebGL state tracking
+    const maxVertexAttribs = this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
+    for (let i = 0; i < maxVertexAttribs; i++) {
+      this.gl.disableVertexAttribArray(i);
+      this.gl.vertexAttribDivisor(i, 0);
+    }
   }
 
   createProgram(vertexShaderSource: string, fragmentShaderSource: string): WebGLProgram {
@@ -277,7 +338,7 @@ export class WebGL2MicroLayer {
     if (!program) {
       throw new Error('Failed to create WebGL program');
     }
-    
+
     this.gl.attachShader(program, vertexShader);
     this.gl.attachShader(program, fragmentShader);
     this.gl.linkProgram(program);
@@ -298,7 +359,7 @@ export class WebGL2MicroLayer {
     if (!shader) {
       throw new Error('Failed to create WebGL shader');
     }
-    
+
     this.gl.shaderSource(shader, source);
     this.gl.compileShader(shader);
 
@@ -340,7 +401,7 @@ export class WebGL2MicroLayer {
 
     return texture;
   }
-  
+
   createTextureFromCanvas(canvas: HTMLCanvasElement | OffscreenCanvas): WebGLTexture {
     const gl = this.gl;
     const texture = gl.createTexture();
@@ -389,14 +450,14 @@ export class WebGL2MicroLayer {
     if (!framebuffer) {
       throw new Error('Failed to create framebuffer');
     }
-    
+
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
 
     const texture = this.gl.createTexture();
     if (!texture) {
       throw new Error('Failed to create texture');
     }
-    
+
     this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
     this.gl.texImage2D(this.gl.TEXTURE_2D, 0, internalFormat!, width, height, 0, format!, type!, null);
 
@@ -456,11 +517,11 @@ export class WebGL2MicroLayer {
   }
 
   setUniform(
-    gl: WebGL2RenderingContext, 
-    textureUnits: number[], 
-    numUniforms: number, 
+    gl: WebGL2RenderingContext,
+    textureUnits: number[],
+    numUniforms: number,
     program: WebGLProgram,
-    name: string, 
+    name: string,
     value: any
   ): void {
     const location = gl.getUniformLocation(program, name);
@@ -566,31 +627,127 @@ export class WebGL2MicroLayer {
     }
   }
 
-  render(programName: string, uniforms: Record<string, any> = {}, attributes: Attributes = {}): void {
+  render(programName: string, uniforms: Record<string, any> = {}, attributes: RenderAttributes = {}): void {
     const program = this.programs.get(programName);
     if (!program) {
       throw new Error(`Program "${programName}" not found`);
     }
 
-    this.gl.useProgram(program);
+    try {
+      this.gl.useProgram(program);
 
-    // Already has the font-image
-    const textureUnits: number[] = [];
+      // Already has the font-image
+      const textureUnits: number[] = [];
 
-    const numUniforms = this.gl.getProgramParameter(program, this.gl.ACTIVE_UNIFORMS);
+      const numUniforms = this.gl.getProgramParameter(program, this.gl.ACTIVE_UNIFORMS);
 
-    for (const [name, value] of Object.entries(uniforms)) {
-      this.setUniform(this.gl, textureUnits, numUniforms, program, name, value);
+      for (const [name, value] of Object.entries(uniforms)) {
+        this.setUniform(this.gl, textureUnits, numUniforms, program, name, value);
+      }
+
+      const vertexCount = this.setupAttributes(program, attributes);
+      const numInstances = attributes.numInstances || 1;
+
+      if (attributes.instanceAttributes && Object.keys(attributes.instanceAttributes).length > 0) {
+        this.gl.drawArraysInstanced(this.gl.TRIANGLE_STRIP, 0, vertexCount, numInstances);
+      } else {
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, vertexCount);
+      }
+    } finally {
+      // Always reset attributes, even if an error occurs during rendering
+      this.resetInstancedAttributes();
+      
+      // Reset texture units
+      for (let i = 0; i < 16; i++) { // 16 is a reasonable max number of texture units
+        this.gl.activeTexture(this.gl.TEXTURE0 + i);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+      }
+      
+      // Reset program
+      this.gl.useProgram(null);
     }
+  }
 
+  setupAttributes(program: WebGLProgram, attributes: RenderAttributes): number {
+    // First, disable all attributes and reset all divisors to avoid state bleeding
+    const maxVertexAttribs = this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
+    for (let i = 0; i < maxVertexAttribs; i++) {
+      this.gl.disableVertexAttribArray(i);
+      this.gl.vertexAttribDivisor(i, 0);
+    }
+    
+    // Clear our tracking sets at the beginning of each new render
+    this.activeAttributes.clear();
+    this.activeInstancedAttributes.clear();
+
+    // Set up regular attributes
     for (const [name, value] of Object.entries(attributes)) {
+      if (name === 'instanceAttributes' || name === 'numInstances') continue;
+
       const location = this.gl.getAttribLocation(program, name);
+      if (location === -1) {
+        console.warn(`Attribute "${name}" not found in shader program`);
+        continue;
+      }
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, value.buffer);
       this.gl.enableVertexAttribArray(location);
       this.gl.vertexAttribPointer(location, value.size, this.gl.FLOAT, false, 0, 0);
+      // Explicitly set divisor to 0 for regular attributes
+      this.gl.vertexAttribDivisor(location, 0);
+      
+      // Track this attribute for cleanup
+      this.activeAttributes.add(location);
     }
 
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    // Set up instanced attributes
+    if (attributes.instanceAttributes) {
+      for (const [name, value] of Object.entries(attributes.instanceAttributes)) {
+        const location = this.gl.getAttribLocation(program, name);
+        if (location === -1) {
+          console.warn(`Instanced attribute "${name}" not found in shader program`);
+          continue;
+        }
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, value.buffer);
+        this.gl.enableVertexAttribArray(location);
+        this.gl.vertexAttribPointer(location, value.itemSize, this.gl.FLOAT, false, 0, 0);
+        this.gl.vertexAttribDivisor(location, 1); // This is the key to instancing!
+        
+        // Track this instanced attribute for cleanup
+        this.activeInstancedAttributes.add(location);
+      }
+    }
+
+    return 4; // Quad is always 4 vertices
+  }
+
+  resetInstancedAttributes(): void {
+    // Reset divisors for all tracked instanced attributes
+    for (const location of this.activeInstancedAttributes) {
+      // Reset the divisor
+      this.gl.vertexAttribDivisor(location, 0);
+      // Also disable the attribute to fully reset state
+      this.gl.disableVertexAttribArray(location);
+    }
+    
+    // Also disable regular attributes that we tracked
+    for (const location of this.activeAttributes) {
+      this.gl.disableVertexAttribArray(location);
+    }
+    
+    // For additional safety, disable all possible attribute arrays
+    // This ensures attributes from one shader don't affect another
+    const maxVertexAttribs = this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
+    for (let i = 0; i < maxVertexAttribs; i++) {
+      this.gl.disableVertexAttribArray(i);
+      this.gl.vertexAttribDivisor(i, 0);  // Reset divisor for all attributes
+    }
+    
+    // Clear our tracking sets after cleanup
+    this.activeAttributes.clear();
+    this.activeInstancedAttributes.clear();
+    
+    // Unbind any buffer to clean up state
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
   }
 
   createFullscreenQuad(): Attribute {
@@ -607,12 +764,16 @@ export class WebGL2MicroLayer {
     );
     return {buffer, size: 2};
   }
-
-  createPipeline(): WebGLPipeline {
-    // Create fullscreen quad
-    const fullscreenQuad = this.createFullscreenQuad();
-
-    return new WebGLPipeline(this, fullscreenQuad);
+  
+  createInstancedAttribute(data: Float32Array, itemSize: number): InstancedAttribute {
+    const buffer = this.gl.createBuffer();
+    if (!buffer) {
+      throw new Error('Failed to create instanced buffer');
+    }
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, data, this.gl.STATIC_DRAW);
+    return { buffer, itemSize };
   }
 
   cleanup() {
@@ -631,8 +792,8 @@ export class WebGL2MicroLayer {
   }
 }
 
-export function buildWebGlPipeline(canvas: HTMLCanvasElement | OffscreenCanvas): WebGLPipeline {
+export function createPipeline(canvas: HTMLCanvasElement | OffscreenCanvas): WebGLPipeline {
   const w = new WebGL2MicroLayer(canvas);
-  return w.createPipeline();
+  return new WebGLPipeline(w);
 }
 

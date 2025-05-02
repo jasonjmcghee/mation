@@ -7,7 +7,7 @@ export {Scene, Layer} from './animation.ts';
 export type { DrawableElement, AnimationSegment } from './animation.ts';
 
 // Export WebGL related components
-export {buildWebGlPipeline, WebGLPipeline} from './webgl.ts';
+export {createPipeline, WebGLPipeline} from './webgl.ts';
 export type { WebGLInitResult } from './webgl.ts';
 
 // Export easing functions

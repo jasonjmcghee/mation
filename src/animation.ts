@@ -1,6 +1,6 @@
 // Animation primitives
 import {EasingFunction} from "./easings.ts";
-import {buildWebGlPipeline, WebGLInitResult, WebGLPipeline} from "./webgl.ts";
+import {createPipeline, WebGLInitResult, WebGLPipeline} from "./webgl.ts";
 
 /**
  * Interface defining the requirements for any Mation Scene
@@ -36,7 +36,7 @@ export interface IScene {
   setZoom(value: number): void;
   setPan(value: [number, number]): void;
   setMousePosition(x: number, y: number): void;
-  setForceDefaultLayerOnly(value: boolean): void;
+  setPerformingPreviewAction(value: boolean): void;
 
   setTargetFPS(fps: number): void;
 
@@ -54,12 +54,18 @@ interface AnimationOptions {
   parallel?: boolean;
 }
 
+export interface DrawableExtras {
+  layers: Record<string, Layer>;
+}
+
 export interface DrawableElement {
-  draw(ctx: OffscreenCanvasRenderingContext2D, progress: number, extras: { layers: Record<string, Layer> }): void;
+  draw(ctx: OffscreenCanvasRenderingContext2D, progress: number, extras: DrawableExtras): void;
   update?(progress: number): void;
   layer?: string | string[];
   segmentStartTime?: number; // Track when element was added
 }
+
+export type RenderHandler = (texture: WebGLTexture, progress: number, previewAction: boolean) => void;
 
 export class Layer {
   public name: string;
@@ -68,23 +74,23 @@ export class Layer {
   public width?: number;
   public height?: number;
   public isSubview?: boolean;
-  public renderWhenScrubbing?: boolean;
+  public renderDuringPreviewAction?: boolean;
   public extras?: Record<string, any>;
   private pipeline: WebGLPipeline;
   public ignorePanZoom?: boolean;
-  render: (texture: WebGLTexture, progress: number) => void;
+  render: RenderHandler;
 
   constructor(
     name: string, 
     pipeline: WebGLPipeline,
-    render: (texture: WebGLTexture, progress: number) => void,
+    render: RenderHandler,
     options: {
       x?: number;
       y?: number;
       width?: number;
       height?: number;
       isSubview?: boolean;
-      renderWhenScrubbing?: boolean;
+      renderDuringPreviewAction?: boolean;
       ignorePanZoom?: boolean;
       extras?: Record<string, any>;
     } = {}
@@ -97,7 +103,7 @@ export class Layer {
     this.width = options.width;
     this.height = options.height;
     this.isSubview = options.isSubview;
-    this.renderWhenScrubbing = options.renderWhenScrubbing;
+    this.renderDuringPreviewAction = options.renderDuringPreviewAction;
     this.ignorePanZoom = options.ignorePanZoom;
     this.extras = options.extras;
   }
@@ -186,7 +192,7 @@ export class Scene implements IScene {
     this._pan[0] = newPanX;
     this._pan[1] = newPanY;
 
-    // this.setForceDefaultLayerOnly(true);
+    // this.setPerformingPreviewAction(true);
     // Queue render with updated transforms
     this.queueRender();
     this.savePlayerState();
@@ -194,7 +200,6 @@ export class Scene implements IScene {
   
   setPan(value: [number, number]): void {
     this._pan = value;
-    this.setForceDefaultLayerOnly(true);
     // Queue render with updated transforms
     this.queueRender();
     this.savePlayerState();
@@ -220,7 +225,7 @@ export class Scene implements IScene {
   private currentTime: number = 0;
   private totalDuration: number = 0;
   private lastRenderTime: number = 0;
-  private forceDefaultLayerOnly: boolean = false;
+  private performingPreviewAction: boolean = false;
   private renderQueued: boolean = false;
   private targetFPS: number = 60;
   private frameInterval: number = (1000 / 60) / 1000; // 16.67ms for 60fps
@@ -255,7 +260,7 @@ export class Scene implements IScene {
 
     // Initialize the default pipeline with the default shader
     // This pipeline renders directly to the main canvas
-    const defaultPipeline = buildWebGlPipeline(this.canvas);
+    const defaultPipeline = createPipeline(this.canvas);
     this.texturePipelineResult = defaultPipeline.add(defaultShader);
 
     // Initialize default layer canvas
@@ -279,7 +284,7 @@ export class Scene implements IScene {
       width: layer.width,
       height: layer.height,
       isSubview: layer.isSubview,
-      renderWhenScrubbing: layer.renderWhenScrubbing,
+      renderDuringPreviewAction: layer.renderDuringPreviewAction,
       extras: layer.extras ? {...layer.extras} : undefined
     };
     
@@ -299,7 +304,7 @@ export class Scene implements IScene {
       width: layer.width,
       height: layer.height,
       isSubview: layer.isSubview,
-      renderWhenScrubbing: layer.renderWhenScrubbing,
+      renderDuringPreviewAction: layer.renderDuringPreviewAction,
       extras: layer.extras ? {...layer.extras} : undefined
     };
     
@@ -771,20 +776,20 @@ export class Scene implements IScene {
     this.savePlayerState();
   }
   
-  // Getter and setter for forceDefaultLayerOnly
-  setForceDefaultLayerOnly(value: boolean): void {
-    if (this.forceDefaultLayerOnly !== value) {
-      this.forceDefaultLayerOnly = value;
+  // Getter and setter for performingPreviewAction
+  setPerformingPreviewAction(value: boolean): void {
+    if (this.performingPreviewAction !== value) {
+      this.performingPreviewAction = value;
 
-      if (!this.forceDefaultLayerOnly) {
+      if (!this.performingPreviewAction) {
         // Queue re-render to apply the change
         this.queueRender();
       }
     }
   }
   
-  getForceDefaultLayerOnly(): boolean {
-    return this.forceDefaultLayerOnly;
+  getPerformingPreviewAction(): boolean {
+    return this.performingPreviewAction;
   }
 
   // Core animation method - now updated to work with the timeline
@@ -820,8 +825,6 @@ export class Scene implements IScene {
       this.currentTime = segmentStartTime + duration;
     }
   }
-
-  // We don't need the startAnimation method any more as we're using the timeline-based approach
 
   private renderElement(element: DrawableElement, ctx: OffscreenCanvasRenderingContext2D, progress: number): void {
     if (element.update) element.update(progress);
@@ -861,10 +864,10 @@ export class Scene implements IScene {
       this.renderElement(element, defaultCtx, elementProgress);
     }
     
-    // If forceDefaultLayerOnly is true, collect all elements from all layers and render them to default layer
+    // If performingPreviewAction is true, collect all elements from all layers and render them to default layer
     for (const layerName in this.layerElements) {
       const layer = this.layerLookup[layerName];
-      if (this.forceDefaultLayerOnly && !layer.renderWhenScrubbing) {
+      if (this.performingPreviewAction && !layer.renderDuringPreviewAction) {
         const elements = this.layerElements[layerName];
         for (const element of elements) {
           // Skip elements that were added after the current time
@@ -897,7 +900,7 @@ export class Scene implements IScene {
     
     // Now render each additional layer in order, but only if not forcing default layer only
     for (const layer of this.layers) {
-      if (!this.forceDefaultLayerOnly || layer.renderWhenScrubbing) {
+      if (!this.performingPreviewAction || layer.renderDuringPreviewAction) {
         const layerCanvas = this.layerCanvases[layer.name];
         const ctx = layerCanvas.getContext('2d')!;
         ctx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
@@ -963,7 +966,7 @@ export class Scene implements IScene {
           );
         }
 
-        layer.render(texture, 1.0); // Always use full blending
+        layer.render(texture, 1.0, this.performingPreviewAction);
 
         // Disable blending and scissor test after rendering
         gl.disable(gl.BLEND);
