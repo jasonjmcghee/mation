@@ -89,58 +89,7 @@ const float SQRT_2 = 1.41;
 in vec2 vUv;
 out vec4 FragColor;
 
-void classic() {
-  if (skip) {
-    FragColor = vec4(vUv, 0.0, 1.0);
-  } else {
-    vec2 nearestSeed = vec2(-1.0);
-    float nearestDist = 999999.9;
-    vec2 pre = uOffset * oneOverSize;
-
-    // Start with the center to try to appeal to loading in a block
-    vec2 sampleUV = vUv;
-
-    // Check if the sample is within bounds
-    vec2 sampleValue = texture(inputTexture, sampleUV).xy;
-    vec2 sampleSeed = sampleValue.xy;
-
-    if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
-      vec2 diff = sampleSeed - vUv;
-      float dist = dot(diff, diff);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestSeed.xy = sampleValue.xy;
-      }
-    }
-
-    // Then do the rest
-    for (float y = -1.0; y <= 1.0; y += 1.0) {
-      for (float x = -1.0; x <= 1.0; x += 1.0) {
-        if (x == 0.0 && y == 0.0) { continue; }
-        vec2 sampleUV = vUv + vec2(x, y) * pre;
-
-        // Check if the sample is within bounds
-        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) { continue; }
-
-          vec2 sampleValue = texture(inputTexture, sampleUV).xy;
-          vec2 sampleSeed = sampleValue.xy;
-
-          if (sampleSeed.x > 0.0 || sampleSeed.y > 0.0) {
-            vec2 diff = sampleSeed - vUv;
-            float dist = dot(diff, diff);
-            if (dist < nearestDist) {
-              nearestDist = dist;
-              nearestSeed.xy = sampleValue.xy;
-            }
-          }
-      }
-    }
-
-    FragColor = vec4(nearestSeed, 0.0, 1.0);
-  }
-}
-
-void separable() {
+void main() {
   if (skip) {
     FragColor = vec4(vUv, 0.0, 1.0);
   } else {
@@ -193,14 +142,6 @@ void separable() {
     }
 
     FragColor = vec4(nearestSeed, 0.0, 1.0);
-  }
-}
-
-void main() {
-  if (direction > -1) {
-    separable();
-  } else {
-    classic();
   }
 }`,
         uniforms: {
