@@ -221,11 +221,9 @@ void main() {
         uniforms: {
           resolution: [this.width, this.height],
           jfaTexture: null,
-          surfaceTexture: null,
         },
         fragmentShader: `
         uniform sampler2D jfaTexture;
-        uniform sampler2D surfaceTexture;
         uniform vec2 resolution;
 
         in vec2 vUv;
@@ -430,75 +428,92 @@ void main() {
           ditherRange: 1.0,
           resolution: [this.width, this.height],
         }
-      })
+      });
+
+      const seedPass = (texture) => {
+        seedRender({
+          renderTarget: seedRenderTargets[0],
+          uniforms: { surfaceTexture: texture }
+        });
+        return seedRenderTargets[0].texture;
+      }
+
+      const jfaPass = (seedTexture) => {
+        let currentInput = seedTexture;
+
+        let [renderA, renderB] = jfaRenderTargets;
+        let currentOutput = renderA;
+        let passes = jfaUniforms.passes;
+
+        for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
+          const offset = Math.pow(2, passes - i);
+
+          jfaRender({
+            renderTarget: currentOutput,
+            uniforms: {
+              skip: passes === 0,
+              inputTexture: currentInput,
+              uOffset: offset,
+              direction: 0,
+            },
+          });
+
+          currentInput = currentOutput.texture;
+          currentOutput = (currentOutput === renderA) ? renderB : renderA;
+
+          jfaRender({
+            renderTarget: currentOutput,
+            uniforms: {
+              skip: passes === 0,
+              inputTexture: currentInput,
+              uOffset: offset,
+              direction: 1,
+            },
+          });
+
+          currentInput = currentOutput.texture;
+          currentOutput = (currentOutput === renderA) ? renderB : renderA;
+        }
+
+        return currentOutput.texture;
+      }
+
+      const dfPass = (jfaTexture) => {
+        dfRender({
+          renderTarget: dfRenderTargets[0],
+          uniforms: {
+            jfaTexture,
+          }
+        });
+        return dfRenderTargets[0].texture;
+      }
+
+      const giPass = (sceneTexture, distanceTexture, previewAction) => {
+        giRender({
+          renderTarget: giRenderTargets[0],
+          uniforms: {
+            distanceTexture,
+            sceneTexture,
+            rayCount: previewAction ? 8 : 128
+          }
+        });
+        return giRenderTargets[0].texture;
+      }
 
       const curveLayer = new Layer(
         'curve-layer',
         curvePipeline,
         (texture, _, previewAction) => {
-          seedRender({
-            renderTarget: seedRenderTargets[0],
-            uniforms: { surfaceTexture: texture }
-          });
-
-          let currentInput = seedRenderTargets[0].texture;
-
-          let [renderA, renderB] = jfaRenderTargets;
-          let currentOutput = renderA;
-          let passes = jfaUniforms.passes;
-
-          for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
-            const offset = Math.pow(2, passes - i);
-
-            jfaRender({
-              renderTarget: currentOutput,
-              uniforms: {
-                skip: passes === 0,
-                inputTexture: currentInput,
-                uOffset: offset,
-                direction: 0,
-              },
-            });
-
-            currentInput = currentOutput.texture;
-            currentOutput = (currentOutput === renderA) ? renderB : renderA;
-
-            jfaRender({
-              renderTarget: currentOutput,
-              uniforms: {
-                skip: passes === 0,
-                inputTexture: currentInput,
-                uOffset: offset,
-                direction: 1,
-              },
-            });
-
-            currentInput = currentOutput.texture;
-            currentOutput = (currentOutput === renderA) ? renderB : renderA;
-          }
-
-          dfRender({
-            renderTarget: dfRenderTargets[0],
-            uniforms: {
-              jfaTexture: currentOutput.texture,
-              surfaceTexture: texture,
-            }
-          });
-
-          giRender({
-            renderTarget: giRenderTargets[0],
-            uniforms: {
-              distanceTexture: dfRenderTargets[0].texture,
-              sceneTexture: texture,
-              rayCount: previewAction ? 8 : 128
-            }
-          });
+          const seedTexture = seedPass(texture);
+          const jfaTexture = jfaPass(seedTexture);
+          const distanceTexture = dfPass(jfaTexture);
+          const giTexture = giPass(texture, distanceTexture, previewAction);
 
           debandingRender({
             uniforms: {
-              inputTexture: giRenderTargets[0].texture,
+              inputTexture: giTexture,
             }
-          })
+          });
         },
         {
           ignorePanZoom: true,
@@ -512,9 +527,8 @@ void main() {
         'seed-layer',
         curvePipeline,
         (texture, _) => {
-          seedRender({
-            uniforms: { surfaceTexture: texture }
-          });
+          seedPass(texture);
+          seedRender();
         },
         {
           x: this.width * 0.125,
@@ -530,50 +544,8 @@ void main() {
         'jfa-layer',
         curvePipeline,
         (texture, _) => {
-          seedRender({
-            renderTarget: seedRenderTargets[0],
-            uniforms: { surfaceTexture: texture }
-          });
-
-          let currentInput = seedRenderTargets[0].texture;
-
-          let [renderA, renderB] = jfaRenderTargets;
-          let currentOutput = renderA;
-          let passes = jfaUniforms.passes;
-
-          for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
-            const offset = Math.pow(2, passes - i);
-
-            jfaRender({
-              renderTarget: currentOutput,
-              uniforms: {
-                skip: passes === 0,
-                inputTexture: currentInput,
-                // This intentionally uses `this.passes` which is the true value
-                // In order to properly show stages using the JFA slider.
-                uOffset: offset,
-                direction: 0,
-              },
-            });
-
-            currentInput = currentOutput.texture;
-            currentOutput = (currentOutput === renderA) ? renderB : renderA;
-
-            jfaRender({
-              renderTarget: currentOutput,
-              uniforms: {
-                skip: passes === 0,
-                inputTexture: currentInput,
-                // This intentionally uses `this.passes` which is the true value
-                // In order to properly show stages using the JFA slider.
-                uOffset: offset,
-                direction: 1,
-              },
-            });
-
-            currentInput = currentOutput.texture;
-            currentOutput = (currentOutput === renderA) ? renderB : renderA;
-          }
+          const seedTexture = seedPass(texture);
+          jfaPass(seedTexture);
           jfaRender();
         },
         {
@@ -590,42 +562,10 @@ void main() {
         'df-layer',
         curvePipeline,
         (texture, _) => {
-          seedRender({
-            renderTarget: seedRenderTargets[0],
-            uniforms: { surfaceTexture: texture }
-          });
-
-          let currentInput = seedRenderTargets[0].texture;
-
-          let [renderA, renderB] = jfaRenderTargets;
-          let currentOutput = renderA;
-          let passes = jfaUniforms.passes;
-
-          for (let i = 0; i < passes || (passes === 0 && i === 0); i++) {
-            const offset = Math.pow(2, passes - i - 1);
-
-            jfaRender({
-              renderTarget: currentOutput,
-              uniforms: {
-                skip: passes === 0,
-                inputTexture: currentInput,
-                // This intentionally uses `this.passes` which is the true value
-                // In order to properly show stages using the JFA slider.
-                uOffset: offset,
-                direction: 0,
-              },
-            });
-
-            currentInput = currentOutput.texture;
-            currentOutput = (currentOutput === renderA) ? renderB : renderA;
-          }
-
-          dfRender({
-            uniforms: {
-              jfaTexture: currentOutput.texture,
-              surfaceTexture: texture,
-            }
-          });
+          const seedTexture = seedPass(texture);
+          const jfaTexture = jfaPass(seedTexture);
+          dfPass(jfaTexture);
+          dfRender();
         },
         {
           x: this.width * 0.25,
