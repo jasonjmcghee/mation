@@ -59,6 +59,19 @@ export default class Mation {
   private loop = false;
   private options: MationOptions;
 
+  static async create(
+    container: Element,
+    sceneFn: (canvas: HTMLCanvasElement) => IScene,
+    options: MationOptions = {}
+  ): Promise<Mation> {
+    const mation = new Mation(options);
+    const canvas = document.createElement("canvas");
+    container.append(canvas);
+    mation.setScene(sceneFn(canvas));
+    await mation.initialize(container);
+    return mation;
+  }
+
   constructor(options: MationOptions = {}) {
     this.options = {
       enableRendering: false,
@@ -72,12 +85,12 @@ export default class Mation {
       enableShortcuts: true,
       ...options
     };
-    
+
     // Set loop property from options
     this.loop = this.options.loop || false;
     
     // Set initial playing state based on autoplay
-    this.isPlaying = this.options.autoplay || false;
+    this.isPlaying = false;
     
     // Inject styles if requested
     if (this.options.injectStyles) {
@@ -144,12 +157,14 @@ export default class Mation {
       // Initialize duration once animation is loaded
       const duration = this.scene.getDuration();
       const currentTime = this.scene.getCurrentTime();
+      this.scene.seekToTime(0);
       
       // Update time display with the current position if UI is shown
       if (this.options.showUI) {
         this.updateTimeDisplay(currentTime, duration);
       }
-      
+
+      this.isPlaying = this.options.autoplay ?? false;
       // Set scene's playing state based on our isPlaying property (initialized from autoplay option)
       if (this.isPlaying) {
         this.scene.play();
@@ -909,12 +924,17 @@ export default class Mation {
 
         // Check if animation has ended
         if (currentTime >= totalDuration && this.isPlaying) {
-          this.isPlaying = false;
-          if (this.playPauseButton) this.playPauseButton.textContent = '▶️';
+          this.isPlaying = this.loop;
+          if (this.playPauseButton && !this.isPlaying) this.playPauseButton.textContent = '▶️';
         }
       }
     }
 
     requestAnimationFrame(this.updateScrubber);
   }
+
+  static isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  };
 }

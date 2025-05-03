@@ -398,7 +398,7 @@ export class Scene implements IScene {
       this.layerElements[layerName] = [];
     }
     
-    this.currentTime = 0;
+    this.setCurrentTime(0);
     this.totalDuration = 0;
     
     // Clean up WebGL texture cache
@@ -458,7 +458,7 @@ export class Scene implements IScene {
         // Store current time but don't apply until timeline is built
         // It will be applied in runSequence() after buildAnimationTimeline()
         if (state.currentTime !== undefined) {
-          this.currentTime = state.currentTime;
+          this.setCurrentTime(state.currentTime);
           console.log(`Stored time for later restoration: ${this.currentTime}`);
         }
         
@@ -496,6 +496,10 @@ export class Scene implements IScene {
   apply(fn: (ctx: OffscreenCanvasRenderingContext2D) => void) {
     fn(this.ctx);
   }
+  
+  setCurrentTime(time: number): void {
+    this.currentTime = time;
+  }
 
   /**
    * Setup layers for the scene
@@ -530,7 +534,7 @@ export class Scene implements IScene {
     
     // Temporarily reset timeline state to build it
     const tempCurrentTime = this.currentTime;
-    this.currentTime = 0;
+    this.setCurrentTime(0);
     this.totalDuration = 0;
     this.animationSegments = [];
     this.lastRenderTime = 0;
@@ -547,9 +551,9 @@ export class Scene implements IScene {
       // Otherwise, restore the previous time position
       if (oldDuration !== this.totalDuration && timeToRestore > this.totalDuration) {
         // If we were at the end, stay at the end, otherwise go to start
-        this.currentTime = (timeToRestore >= oldDuration) ? this.totalDuration : 0;
+        this.setCurrentTime((timeToRestore >= oldDuration) ? this.totalDuration : 0);
       } else {
-        this.currentTime = Math.min(timeToRestore, this.totalDuration);
+        this.setCurrentTime(Math.min(timeToRestore, this.totalDuration));
       }
     }
     
@@ -592,7 +596,7 @@ export class Scene implements IScene {
     if (!this.isPlaying) {
       // If we're at the end of the animation, loop back to start
       if (this.currentTime >= this.totalDuration) {
-        this.currentTime = 0;
+        this.setCurrentTime(0);
       }
       
       this.isPlaying = true;
@@ -689,7 +693,7 @@ export class Scene implements IScene {
         
         // Update current time with clamping to valid range
         const prevTime = this.currentTime;
-        this.currentTime = Math.min(this.currentTime + deltaTime, this.totalDuration);
+        this.setCurrentTime(Math.min(this.currentTime + deltaTime, this.totalDuration));
         
         // Render at the current time
         this.renderAtTime(this.currentTime);
@@ -706,7 +710,7 @@ export class Scene implements IScene {
         if (this.currentTime >= this.totalDuration) {
           // If looping is enabled from Mation, restart from beginning
           if ((window as any).mation?.loop) {
-            this.currentTime = 0;
+            this.setCurrentTime(0);
             // Keep playing
             this.isPlaying = true;
           } else {
@@ -747,7 +751,7 @@ export class Scene implements IScene {
   renderAtTime(time: number): void {
     // Clamp time to valid range
     const targetTime = Math.max(0, Math.min(time, this.totalDuration));
-    this.currentTime = targetTime;
+    this.setCurrentTime(targetTime);
 
     // Clear the canvas
     this.clear();
@@ -793,7 +797,7 @@ export class Scene implements IScene {
   seekToTime(time: number): void {
     // Clamp time to valid range
     const targetTime = Math.max(0, Math.min(time, this.totalDuration));
-    this.currentTime = targetTime;
+    this.setCurrentTime(targetTime);
     
     // Update the last render time to avoid large time jumps when animation resumes
     this.lastRenderTime = performance.now();
@@ -856,7 +860,7 @@ export class Scene implements IScene {
 
     if (!options?.parallel) {
       // Advance current time
-      this.currentTime = segmentStartTime + duration;
+      this.setCurrentTime(segmentStartTime + duration);
     }
   }
 

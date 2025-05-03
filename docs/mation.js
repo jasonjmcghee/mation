@@ -1,29 +1,29 @@
-var U = Object.defineProperty;
-var k = (i, e, t) => e in i ? U(i, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : i[e] = t;
-var a = (i, e, t) => (k(i, typeof e != "symbol" ? e + "" : e, t), t);
+var k = Object.defineProperty;
+var N = (i, e, t) => e in i ? k(i, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : i[e] = t;
+var o = (i, e, t) => (N(i, typeof e != "symbol" ? e + "" : e, t), t);
 const A = `#version 300 es
 precision highp float;
 precision highp int;
-`, N = `in vec2 position;
+`, X = `in vec2 position;
 out vec2 vUv;
 void main() {
     vUv = 0.5 * (position + 1.0);
     gl_Position = vec4(position, 0.0, 1.0);
 }`;
-class X {
+class z {
   constructor(e, t, s) {
-    a(this, "vertexShader");
-    a(this, "fragmentShader");
-    a(this, "program");
-    a(this, "quad");
-    a(this, "name");
-    a(this, "w");
-    a(this, "uniforms");
-    a(this, "instancedAttributes");
-    a(this, "numInstances");
-    a(this, "isInstanced");
-    const { fragmentShader: o, vertexShader: r, uniforms: n, name: l, instanceAttributes: h, numInstances: d } = s;
-    this.vertexShader = r ?? N, this.fragmentShader = o, this.program = e.createProgram(
+    o(this, "vertexShader");
+    o(this, "fragmentShader");
+    o(this, "program");
+    o(this, "quad");
+    o(this, "name");
+    o(this, "w");
+    o(this, "uniforms");
+    o(this, "instancedAttributes");
+    o(this, "numInstances");
+    o(this, "isInstanced");
+    const { fragmentShader: a, vertexShader: r, uniforms: n, name: l, instanceAttributes: h, numInstances: d } = s;
+    this.vertexShader = r ?? X, this.fragmentShader = a, this.program = e.createProgram(
       `${A}${this.vertexShader}`,
       `${A}${this.fragmentShader}`
     ), this.uniforms = n, this.quad = t, this.name = l || "", e.programs.set(l || "", this.program), this.w = e, this.instancedAttributes = {}, this.numInstances = d || 1, this.isInstanced = !!h && Object.keys(h).length > 0;
@@ -58,18 +58,18 @@ class X {
     );
   }
 }
-class z {
+class Y {
   constructor(e, t = e.createFullscreenQuad()) {
-    a(this, "w");
-    a(this, "quad");
-    a(this, "passes");
+    o(this, "w");
+    o(this, "quad");
+    o(this, "passes");
     this.w = e, this.quad = t, this.passes = {};
   }
   createInstancedAttribute(e, t) {
     return this.w.createInstancedAttribute(e, t);
   }
   add(e, t = {}, s = {}) {
-    const o = s.dpr || window.devicePixelRatio || 1, r = s.scale ? o : 1, n = this.w, l = this.w.canvas, h = this.w.canvas.width, d = this.w.canvas.height;
+    const a = s.dpr || window.devicePixelRatio || 1, r = s.scale ? a : 1, n = this.w, l = this.w.canvas, h = this.w.canvas.width, d = this.w.canvas.height;
     n.gl.viewport(0, 0, l.width, l.height);
     const g = {
       minFilter: n.gl.NEAREST,
@@ -91,57 +91,57 @@ class z {
       },
       renderTargets: p,
       renderer: n,
-      scaling: o,
+      scaling: a,
       uniforms: y.uniforms,
       gl: this.gl(),
       stage: y
     };
   }
   createPass(e) {
-    const { name: t, instanceAttributes: s } = e, o = `pass-${Object.keys(this.passes).length}:-${t ?? ""}`, r = new X(
+    const { name: t, instanceAttributes: s } = e, a = `pass-${Object.keys(this.passes).length}:-${t ?? ""}`, r = new z(
       this.w,
       this.quad,
       {
         ...e,
-        name: o
+        name: a
       }
     );
     if (s)
       for (const [n, { data: l, itemSize: h }] of Object.entries(s))
         r.setInstanceAttribute(n, l, h);
-    return this.passes[o] = r, r;
+    return this.passes[a] = r, r;
   }
   gl() {
     return this.w.gl;
   }
 }
-class Y {
-  constructor(e, t, s, o) {
-    a(this, "gl");
-    a(this, "name");
-    a(this, "texture");
-    a(this, "framebuffer");
-    this.gl = e, this.name = t, this.texture = s, this.framebuffer = o;
+class $ {
+  constructor(e, t, s, a) {
+    o(this, "gl");
+    o(this, "name");
+    o(this, "texture");
+    o(this, "framebuffer");
+    this.gl = e, this.name = t, this.texture = s, this.framebuffer = a;
   }
   updateFilters({ minFilter: e, magFilter: t }) {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, e), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, t), this.gl.bindTexture(this.gl.TEXTURE_2D, null);
   }
 }
-class $ {
+class G {
   constructor(e, t) {
-    a(this, "canvas");
-    a(this, "gl");
-    a(this, "programs");
-    a(this, "framebuffers");
-    a(this, "defaultRenderTargetProps");
-    a(this, "renderTargets");
+    o(this, "canvas");
+    o(this, "gl");
+    o(this, "programs");
+    o(this, "framebuffers");
+    o(this, "defaultRenderTargetProps");
+    o(this, "renderTargets");
     // Track the active attributes to ensure proper cleanup
-    a(this, "activeAttributes", /* @__PURE__ */ new Set());
+    o(this, "activeAttributes", /* @__PURE__ */ new Set());
     // Track the active instanced attributes to ensure proper cleanup
-    a(this, "activeInstancedAttributes", /* @__PURE__ */ new Set());
+    o(this, "activeInstancedAttributes", /* @__PURE__ */ new Set());
     this.canvas = e;
-    const s = (t == null ? void 0 : t.dpr) ?? (window.devicePixelRatio || 1), o = (t == null ? void 0 : t.canvasScale) ?? 1 / s, r = e.width, n = e.height;
-    "style" in e && (e.style.width = `${r * o}px`, e.style.height = `${n * o}px`);
+    const s = (t == null ? void 0 : t.dpr) ?? (window.devicePixelRatio || 1), a = (t == null ? void 0 : t.canvasScale) ?? 1 / s, r = e.width, n = e.height;
+    "style" in e && (e.style.width = `${r * a}px`, e.style.height = `${n * a}px`);
     const l = e.getContext("webgl2", { antialiasing: !1, alpha: !1 });
     if (!l)
       throw new Error("WebGL2 not supported");
@@ -157,10 +157,10 @@ class $ {
       this.gl.disableVertexAttribArray(d), this.gl.vertexAttribDivisor(d, 0);
   }
   createProgram(e, t) {
-    const s = this.createShader(this.gl.VERTEX_SHADER, e), o = this.createShader(this.gl.FRAGMENT_SHADER, t), r = this.gl.createProgram();
+    const s = this.createShader(this.gl.VERTEX_SHADER, e), a = this.createShader(this.gl.FRAGMENT_SHADER, t), r = this.gl.createProgram();
     if (!r)
       throw new Error("Failed to create WebGL program");
-    if (this.gl.attachShader(r, s), this.gl.attachShader(r, o), this.gl.linkProgram(r), !this.gl.getProgramParameter(r, this.gl.LINK_STATUS))
+    if (this.gl.attachShader(r, s), this.gl.attachShader(r, a), this.gl.linkProgram(r), !this.gl.getProgramParameter(r, this.gl.LINK_STATUS))
       throw new Error("Unable to initialize the shader program: " + this.gl.getProgramInfoLog(r));
     return r;
   }
@@ -179,8 +179,8 @@ ${this.addLineNumbers(t)}`);
     return s;
   }
   createTextureFromImage(e, t) {
-    const o = this.gl.createTexture();
-    if (!o)
+    const a = this.gl.createTexture();
+    if (!a)
       throw new Error("Failed to create WebGL texture");
     const r = new Image();
     r.src = e;
@@ -192,7 +192,7 @@ ${this.addLineNumbers(t)}`);
       if (!h)
         throw new Error("Failed to get 2D context");
       h.drawImage(r, 0, r.height), n.createTextureFromCanvas(l), t && t();
-    }, o;
+    }, a;
   }
   createTextureFromCanvas(e) {
     const t = this.gl, s = t.createTexture();
@@ -202,7 +202,7 @@ ${this.addLineNumbers(t)}`);
       throw new Error("Failed to get 2D context");
     return t.bindTexture(t.TEXTURE_2D, s), t.pixelStorei(t.UNPACK_PREMULTIPLY_ALPHA_WEBGL, !1), t.pixelStorei(t.UNPACK_FLIP_Y_WEBGL, !0), t.texImage2D(t.TEXTURE_2D, 0, t.RGBA, t.RGBA, t.UNSIGNED_BYTE, e), t.pixelStorei(t.UNPACK_FLIP_Y_WEBGL, !1), t.pixelStorei(t.UNPACK_PREMULTIPLY_ALPHA_WEBGL, !1), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_S, t.CLAMP_TO_EDGE), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_T, t.CLAMP_TO_EDGE), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MIN_FILTER, t.NEAREST), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MAG_FILTER, t.NEAREST), t.bindTexture(t.TEXTURE_2D, null), s;
   }
-  createRenderTarget(e, t, s = {}, o) {
+  createRenderTarget(e, t, s = {}, a) {
     const {
       // generateMipmaps,
       minFilter: r,
@@ -213,7 +213,7 @@ ${this.addLineNumbers(t)}`);
     } = {
       ...this.defaultRenderTargetProps,
       ...s
-    }, g = o ?? `rt-${Object.keys(this.renderTargets).length}`, f = this.gl.createFramebuffer();
+    }, g = a ?? `rt-${Object.keys(this.renderTargets).length}`, f = this.gl.createFramebuffer();
     if (!f)
       throw new Error("Failed to create framebuffer");
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, f);
@@ -224,7 +224,7 @@ ${this.addLineNumbers(t)}`);
     const y = this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER);
     if (y !== this.gl.FRAMEBUFFER_COMPLETE)
       throw new Error("Framebuffer is not complete: " + y);
-    return this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null), this.gl.bindTexture(this.gl.TEXTURE_2D, null), this.framebuffers.set(g, { framebuffer: f, texture: p, width: e, height: t }), this.renderTargets[g] = new Y(
+    return this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null), this.gl.bindTexture(this.gl.TEXTURE_2D, null), this.framebuffers.set(g, { framebuffer: f, texture: p, width: e, height: t }), this.renderTargets[g] = new $(
       this.gl,
       g,
       p,
@@ -253,13 +253,13 @@ ${this.addLineNumbers(t)}`);
       throw new Error(`Render target "${e}" not found`);
     return t.texture;
   }
-  setUniform(e, t, s, o, r, n) {
-    const l = e.getUniformLocation(o, r);
+  setUniform(e, t, s, a, r, n) {
+    const l = e.getUniformLocation(a, r);
     if (l === null)
       return;
     let h = null;
     for (let p = 0; p < s; p++) {
-      const y = e.getActiveUniform(o, p);
+      const y = e.getActiveUniform(a, p);
       if (y && y.name === r) {
         h = y;
         break;
@@ -322,15 +322,15 @@ ${this.addLineNumbers(t)}`);
     }
   }
   render(e, t = {}, s = {}) {
-    const o = this.programs.get(e);
-    if (!o)
+    const a = this.programs.get(e);
+    if (!a)
       throw new Error(`Program "${e}" not found`);
     try {
-      this.gl.useProgram(o);
-      const r = [], n = this.gl.getProgramParameter(o, this.gl.ACTIVE_UNIFORMS);
+      this.gl.useProgram(a);
+      const r = [], n = this.gl.getProgramParameter(a, this.gl.ACTIVE_UNIFORMS);
       for (const [d, g] of Object.entries(t))
-        this.setUniform(this.gl, r, n, o, d, g);
-      const l = this.setupAttributes(o, s), h = s.numInstances || 1;
+        this.setUniform(this.gl, r, n, a, d, g);
+      const l = this.setupAttributes(a, s), h = s.numInstances || 1;
       s.instanceAttributes && Object.keys(s.instanceAttributes).length > 0 ? this.gl.drawArraysInstanced(this.gl.TRIANGLE_STRIP, 0, l, h) : this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, l);
     } finally {
       this.resetInstancedAttributes();
@@ -341,24 +341,24 @@ ${this.addLineNumbers(t)}`);
   }
   setupAttributes(e, t) {
     const s = this.gl.getParameter(this.gl.MAX_VERTEX_ATTRIBS);
-    for (let o = 0; o < s; o++)
-      this.gl.disableVertexAttribArray(o), this.gl.vertexAttribDivisor(o, 0);
+    for (let a = 0; a < s; a++)
+      this.gl.disableVertexAttribArray(a), this.gl.vertexAttribDivisor(a, 0);
     this.activeAttributes.clear(), this.activeInstancedAttributes.clear();
-    for (const [o, r] of Object.entries(t)) {
-      if (o === "instanceAttributes" || o === "numInstances")
+    for (const [a, r] of Object.entries(t)) {
+      if (a === "instanceAttributes" || a === "numInstances")
         continue;
-      const n = this.gl.getAttribLocation(e, o);
+      const n = this.gl.getAttribLocation(e, a);
       if (n === -1) {
-        console.warn(`Attribute "${o}" not found in shader program`);
+        console.warn(`Attribute "${a}" not found in shader program`);
         continue;
       }
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, r.buffer), this.gl.enableVertexAttribArray(n), this.gl.vertexAttribPointer(n, r.size, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(n, 0), this.activeAttributes.add(n);
     }
     if (t.instanceAttributes)
-      for (const [o, r] of Object.entries(t.instanceAttributes)) {
-        const n = this.gl.getAttribLocation(e, o);
+      for (const [a, r] of Object.entries(t.instanceAttributes)) {
+        const n = this.gl.getAttribLocation(e, a);
         if (n === -1) {
-          console.warn(`Instanced attribute "${o}" not found in shader program`);
+          console.warn(`Instanced attribute "${a}" not found in shader program`);
           continue;
         }
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, r.buffer), this.gl.enableVertexAttribArray(n), this.gl.vertexAttribPointer(n, r.itemSize, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(n, 1), this.activeInstancedAttributes.add(n);
@@ -395,30 +395,30 @@ ${this.addLineNumbers(t)}`);
     this.clear();
   }
 }
-function G(i) {
-  const e = new $(i);
-  return new z(e);
+function Z(i) {
+  const e = new G(i);
+  return new Y(e);
 }
-class ie {
-  constructor(e, t, s, o = {}) {
-    a(this, "name");
-    a(this, "x");
-    a(this, "y");
-    a(this, "width");
-    a(this, "height");
-    a(this, "isSubview");
-    a(this, "renderDuringPreviewAction");
-    a(this, "extras");
-    a(this, "pipeline");
-    a(this, "ignorePanZoom");
-    a(this, "render");
-    this.name = e, this.pipeline = t, this.render = s, this.x = o.x, this.y = o.y, this.width = o.width, this.height = o.height, this.isSubview = o.isSubview, this.renderDuringPreviewAction = o.renderDuringPreviewAction, this.ignorePanZoom = o.ignorePanZoom, this.extras = o.extras;
+class se {
+  constructor(e, t, s, a = {}) {
+    o(this, "name");
+    o(this, "x");
+    o(this, "y");
+    o(this, "width");
+    o(this, "height");
+    o(this, "isSubview");
+    o(this, "renderDuringPreviewAction");
+    o(this, "extras");
+    o(this, "pipeline");
+    o(this, "ignorePanZoom");
+    o(this, "render");
+    this.name = e, this.pipeline = t, this.render = s, this.x = a.x, this.y = a.y, this.width = a.width, this.height = a.height, this.isSubview = a.isSubview, this.renderDuringPreviewAction = a.renderDuringPreviewAction, this.ignorePanZoom = a.ignorePanZoom, this.extras = a.extras;
   }
   cleanup() {
     this.pipeline.w.cleanup();
   }
 }
-const Z = {
+const j = {
   fragmentShader: `in vec2 vUv;
 out vec4 fragColor;
 uniform sampler2D u_texture;
@@ -431,52 +431,52 @@ void main() {
     u_texture: null,
     u_progress: 0
   }
-}, x = class x {
+}, v = class v {
   constructor({ canvas: e, width: t, height: s }) {
-    a(this, "canvas");
-    a(this, "ctx");
-    a(this, "width");
-    a(this, "height");
-    a(this, "_zoom", 1);
-    a(this, "_pan", [0, 0]);
-    a(this, "mousePosition", [0, 0]);
-    a(this, "animationId", null);
-    a(this, "texturePipelineResult");
-    a(this, "layers", []);
-    a(this, "layerLookup", {});
-    a(this, "layerInitialProperties", {});
-    a(this, "layerCanvases", {});
-    a(this, "layerElements", {});
-    a(this, "defaultLayerElements", []);
-    a(this, "defaultLayerCanvas");
-    a(this, "onFrame");
+    o(this, "canvas");
+    o(this, "ctx");
+    o(this, "width");
+    o(this, "height");
+    o(this, "_zoom", 1);
+    o(this, "_pan", [0, 0]);
+    o(this, "mousePosition", [0, 0]);
+    o(this, "animationId", null);
+    o(this, "texturePipelineResult");
+    o(this, "layers", []);
+    o(this, "layerLookup", {});
+    o(this, "layerInitialProperties", {});
+    o(this, "layerCanvases", {});
+    o(this, "layerElements", {});
+    o(this, "defaultLayerElements", []);
+    o(this, "defaultLayerCanvas");
+    o(this, "onFrame");
     // WebGL texture cache
-    a(this, "textureCache", {});
+    o(this, "textureCache", {});
     // Animation timeline properties
-    a(this, "animationSegments", []);
-    a(this, "isPlaying", !0);
-    a(this, "currentTime", 0);
-    a(this, "totalDuration", 0);
-    a(this, "lastRenderTime", 0);
-    a(this, "performingPreviewAction", !1);
-    a(this, "renderQueued", !1);
-    a(this, "targetFPS", 60);
-    a(this, "frameInterval", 1e3 / 60 / 1e3);
+    o(this, "animationSegments", []);
+    o(this, "isPlaying", !0);
+    o(this, "currentTime", 0);
+    o(this, "totalDuration", 0);
+    o(this, "lastRenderTime", 0);
+    o(this, "performingPreviewAction", !1);
+    o(this, "renderQueued", !1);
+    o(this, "targetFPS", 60);
+    o(this, "frameInterval", 1e3 / 60 / 1e3);
     // Main render loop that respects target FPS
-    a(this, "renderLoop", () => {
+    o(this, "renderLoop", () => {
       var s;
       const e = performance.now(), t = e - this.lastRenderTime;
       if (t >= this.frameInterval || this.lastRenderTime === 0)
         if (this.lastRenderTime = e, this.isPlaying) {
-          const o = t / 1e3, r = this.currentTime;
-          this.currentTime = Math.min(this.currentTime + o, this.totalDuration), this.renderAtTime(this.currentTime), this.savePlayerState(), this.onFrame && this.onFrame(), this.currentTime >= this.totalDuration && ((s = window.mation) != null && s.loop ? (this.currentTime = 0, this.isPlaying = !0) : (this.isPlaying = !1, r < this.totalDuration && this.renderAtTime(this.totalDuration)), this.savePlayerState());
+          const a = t / 1e3, r = this.currentTime;
+          this.setCurrentTime(Math.min(this.currentTime + a, this.totalDuration)), this.renderAtTime(this.currentTime), this.savePlayerState(), this.onFrame && this.onFrame(), this.currentTime >= this.totalDuration && ((s = window.mation) != null && s.loop ? (this.setCurrentTime(0), this.isPlaying = !0) : (this.isPlaying = !1, r < this.totalDuration && this.renderAtTime(this.totalDuration)), this.savePlayerState());
         } else
           this.renderQueued && (this.renderAtTime(this.currentTime), this.renderQueued = !1);
       this.isPlaying && (this.renderQueued = !0), this.isPlaying || this.renderQueued ? this.animationId = requestAnimationFrame(this.renderLoop) : this.animationId = null;
     });
     this.canvas = e, this.canvas.width = t, this.canvas.height = s, this.width = t, this.height = s;
-    const { ctx: o, texturePipelineResult: r, defaultLayerCanvas: n } = this.initialize();
-    this.ctx = o, this.texturePipelineResult = r, this.defaultLayerCanvas = n;
+    const { ctx: a, texturePipelineResult: r, defaultLayerCanvas: n } = this.initialize();
+    this.ctx = a, this.texturePipelineResult = r, this.defaultLayerCanvas = n;
   }
   get zoom() {
     return this._zoom;
@@ -495,9 +495,9 @@ void main() {
   }
   // Add debug logging to setZoom to see what's happening
   setZoom(e) {
-    const [t, s] = this.mousePosition, o = (t - this._pan[0]) / this._zoom, r = (s - this._pan[1]) / this._zoom;
+    const [t, s] = this.mousePosition, a = (t - this._pan[0]) / this._zoom, r = (s - this._pan[1]) / this._zoom;
     this._zoom = e;
-    const n = t - o * this._zoom, l = s - r * this._zoom;
+    const n = t - a * this._zoom, l = s - r * this._zoom;
     this._pan[0] = n, this._pan[1] = l, this.queueRender(), this.savePlayerState();
   }
   setPan(e) {
@@ -510,8 +510,8 @@ void main() {
     if (!t)
       throw new Error("Failed to get 2D context");
     this.ctx = t;
-    const s = G(this.canvas);
-    return this.texturePipelineResult = s.add(Z), this.defaultLayerCanvas = new OffscreenCanvas(this.canvas.width, this.canvas.height), this.setupLayers(), this.restorePlayerState(), {
+    const s = Z(this.canvas);
+    return this.texturePipelineResult = s.add(j), this.defaultLayerCanvas = new OffscreenCanvas(this.canvas.width, this.canvas.height), this.setupLayers(), this.restorePlayerState(), {
       ctx: t,
       texturePipelineResult: this.texturePipelineResult,
       defaultLayerCanvas: this.defaultLayerCanvas
@@ -527,8 +527,8 @@ void main() {
       renderDuringPreviewAction: t.renderDuringPreviewAction,
       extras: t.extras ? { ...t.extras } : void 0
     }, this.layerLookup[t.name] = t, this.layers.splice(e, 0, t), this.layerElements[t.name] = [];
-    const s = t.width ?? this.canvas.width, o = t.height ?? this.canvas.height;
-    this.layerCanvases[t.name] = new OffscreenCanvas(s, o);
+    const s = t.width ?? this.canvas.width, a = t.height ?? this.canvas.height;
+    this.layerCanvases[t.name] = new OffscreenCanvas(s, a);
   }
   pushLayer(e) {
     this.layerInitialProperties[e.name] = {
@@ -582,7 +582,7 @@ void main() {
       const s = this.layerLookup[t];
       s && s.cleanup(), this.layerElements[t] = [];
     }
-    this.currentTime = 0, this.totalDuration = 0;
+    this.setCurrentTime(0), this.totalDuration = 0;
     const e = this.texturePipelineResult.gl;
     for (const t in this.textureCache)
       e.deleteTexture(this.textureCache[t]);
@@ -601,19 +601,19 @@ void main() {
       pan: this._pan
     };
     try {
-      localStorage.setItem(x.PLAYER_STATE_KEY, JSON.stringify(e));
-    } catch (o) {
-      console.warn("Failed to save player state:", o);
+      localStorage.setItem(v.PLAYER_STATE_KEY, JSON.stringify(e));
+    } catch (a) {
+      console.warn("Failed to save player state:", a);
     }
   }
   restorePlayerState() {
-    var e, t, s, o;
+    var e, t, s, a;
     if ((t = (e = window.mation) == null ? void 0 : e.options) != null && t.cacheState)
       try {
-        const r = localStorage.getItem(x.PLAYER_STATE_KEY);
+        const r = localStorage.getItem(v.PLAYER_STATE_KEY);
         if (r) {
           const n = JSON.parse(r);
-          console.log("Found saved state:", n), n.isPlaying !== void 0 && !((o = (s = window.mation) == null ? void 0 : s.options) != null && o.autoplay) && (this.isPlaying = n.isPlaying, console.log(`Restored playing state: ${this.isPlaying}`)), n.currentTime !== void 0 && (this.currentTime = n.currentTime, console.log(`Stored time for later restoration: ${this.currentTime}`)), n.zoom !== void 0 && (this._zoom = n.zoom, console.log(`Restored zoom: ${this._zoom}`)), n.pan !== void 0 && (this._pan = n.pan, console.log(`Restored pan: ${this._pan}`));
+          console.log("Found saved state:", n), n.isPlaying !== void 0 && !((a = (s = window.mation) == null ? void 0 : s.options) != null && a.autoplay) && (this.isPlaying = n.isPlaying, console.log(`Restored playing state: ${this.isPlaying}`)), n.currentTime !== void 0 && (this.setCurrentTime(n.currentTime), console.log(`Stored time for later restoration: ${this.currentTime}`)), n.zoom !== void 0 && (this._zoom = n.zoom, console.log(`Restored zoom: ${this._zoom}`)), n.pan !== void 0 && (this._pan = n.pan, console.log(`Restored pan: ${this._pan}`));
         } else
           console.log("No saved player state found");
       } catch (r) {
@@ -624,13 +624,16 @@ void main() {
     var e, t;
     if ((t = (e = window.mation) == null ? void 0 : e.options) != null && t.cacheState)
       try {
-        localStorage.removeItem(x.PLAYER_STATE_KEY);
+        localStorage.removeItem(v.PLAYER_STATE_KEY);
       } catch (s) {
         console.warn("Failed to clear player state:", s);
       }
   }
   apply(e) {
     e(this.ctx);
+  }
+  setCurrentTime(e) {
+    this.currentTime = e;
   }
   /**
    * Setup layers for the scene
@@ -655,10 +658,10 @@ void main() {
   // Method to run a sequence of animations and build the timeline
   async runSequence() {
     this.clear();
-    const e = this.totalDuration, t = this.currentTime, s = this.isPlaying, o = this.currentTime;
-    if (this.currentTime = 0, this.totalDuration = 0, this.animationSegments = [], this.lastRenderTime = 0, await this.buildAnimationTimeline(), t > 0 || o > 0) {
-      const r = Math.max(t, o);
-      e !== this.totalDuration && r > this.totalDuration ? this.currentTime = r >= e ? this.totalDuration : 0 : this.currentTime = Math.min(r, this.totalDuration);
+    const e = this.totalDuration, t = this.currentTime, s = this.isPlaying, a = this.currentTime;
+    if (this.setCurrentTime(0), this.totalDuration = 0, this.animationSegments = [], this.lastRenderTime = 0, await this.buildAnimationTimeline(), t > 0 || a > 0) {
+      const r = Math.max(t, a);
+      e !== this.totalDuration && r > this.totalDuration ? this.setCurrentTime(r >= e ? this.totalDuration : 0) : this.setCurrentTime(Math.min(r, this.totalDuration));
     }
     return this.isPlaying = s, this.renderAtTime(this.currentTime), this.isPlaying && (this.lastRenderTime = performance.now(), this.startAnimationLoop()), this.savePlayerState(), Promise.resolve();
   }
@@ -673,7 +676,7 @@ void main() {
   }
   // Animation control methods
   play() {
-    this.isPlaying || (this.currentTime >= this.totalDuration && (this.currentTime = 0), this.isPlaying = !0, this.lastRenderTime = performance.now(), this.startAnimationLoop(), this.savePlayerState());
+    this.isPlaying || (this.currentTime >= this.totalDuration && this.setCurrentTime(0), this.isPlaying = !0, this.lastRenderTime = performance.now(), this.startAnimationLoop(), this.savePlayerState());
   }
   pause() {
     this.isPlaying && (this.isPlaying = !1, this.animationId && (cancelAnimationFrame(this.animationId), this.animationId = null), this.savePlayerState());
@@ -713,23 +716,23 @@ void main() {
   // Render the animation at a specific time
   renderAtTime(e) {
     const t = Math.max(0, Math.min(e, this.totalDuration));
-    this.currentTime = t, this.clear();
+    this.setCurrentTime(t), this.clear();
     const s = this.animationSegments.filter((r) => r.startTime <= t);
     s.sort((r, n) => r.startTime - n.startTime);
-    const o = /* @__PURE__ */ new Map();
+    const a = /* @__PURE__ */ new Map();
     for (const r of s) {
       const n = t - r.startTime;
       let l;
       n >= r.duration ? l = 1 : (l = Math.max(0, Math.min(n / r.duration, 1)), l = r.easing(l));
       for (const h of r.elements)
-        o.set(h, l);
+        a.set(h, l);
     }
-    this.renderFrame(o);
+    this.renderFrame(a);
   }
   // Method to seek to a specific time
   seekToTime(e) {
     const t = Math.max(0, Math.min(e, this.totalDuration));
-    this.currentTime = t, this.lastRenderTime = performance.now(), this.queueRender(), t >= this.totalDuration && (this.isPlaying = !1), this.savePlayerState();
+    this.setCurrentTime(t), this.lastRenderTime = performance.now(), this.queueRender(), t >= this.totalDuration && (this.isPlaying = !1), this.savePlayerState();
   }
   // Getter and setter for performingPreviewAction
   setPerformingPreviewAction(e) {
@@ -740,7 +743,7 @@ void main() {
   }
   // Core animation method - now updated to work with the timeline
   animate(e, t) {
-    const s = this.currentTime, o = t.delay || 0, r = s + o, n = t.duration;
+    const s = this.currentTime, a = t.delay || 0, r = s + a, n = t.duration;
     for (const h of e)
       h.segmentStartTime = r, this.registerElement(h);
     const l = {
@@ -750,7 +753,7 @@ void main() {
       easing: t.easing || ((h) => h)
       // Default to linear easing if not provided
     };
-    this.animationSegments.push(l), this.totalDuration = Math.max(this.totalDuration, r + n), t != null && t.parallel || (this.currentTime = r + n);
+    this.animationSegments.push(l), this.totalDuration = Math.max(this.totalDuration, r + n), t != null && t.parallel || this.setCurrentTime(r + n);
   }
   renderElement(e, t, s) {
     e.update && e.update(s), e.draw(t, s, { layers: this.layerLookup });
@@ -782,9 +785,9 @@ void main() {
         }
       }
     }
-    const o = this.getTextureForCanvas(this.defaultLayerCanvas);
+    const a = this.getTextureForCanvas(this.defaultLayerCanvas);
     this.texturePipelineResult.stage.set({
-      u_texture: o,
+      u_texture: a,
       u_progress: 1
       // Always use full blending
     }), this.texturePipelineResult.renderer.setRenderTarget(null);
@@ -828,8 +831,8 @@ void main() {
 };
 // 16.67ms for 60fps
 // State persistence key
-a(x, "PLAYER_STATE_KEY", "mation_player_state");
-let _ = x;
+o(v, "PLAYER_STATE_KEY", "mation_player_state");
+let _ = v;
 const R = {
   // Linear
   linear: (i) => i,
@@ -899,7 +902,7 @@ const R = {
   easeInBounce: (i) => 1 - R.easeOutBounce(1 - i),
   easeInOutBounce: (i) => i < 0.5 ? (1 - R.easeOutBounce(1 - 2 * i)) / 2 : (1 + R.easeOutBounce(2 * i - 1)) / 2
 };
-function j(i) {
+function q(i) {
   return !!document.querySelector(`script[src*="${i}"]`);
 }
 function B() {
@@ -912,19 +915,19 @@ function B() {
   }
   return window.location.origin;
 }
-async function q(i) {
-  return j(i) ? Promise.resolve() : new Promise((e, t) => {
+async function W(i) {
+  return q(i) ? Promise.resolve() : new Promise((e, t) => {
     const s = document.createElement("script");
-    s.src = i, s.async = !0, s.onload = () => e(), s.onerror = (o) => t(new Error(`Failed to load script: ${i}: ${o}`)), document.head.appendChild(s);
+    s.src = i, s.async = !0, s.onload = () => e(), s.onerror = (a) => t(new Error(`Failed to load script: ${i}: ${a}`)), document.head.appendChild(s);
   });
 }
-async function W(i = {}) {
+async function V(i = {}) {
   const e = i.basePath || B();
   try {
     if (window.ffmpegInitialized && window.ffmpegInstance)
       return;
     const t = document.createElement("script");
-    t.src = `${e}/libs/ffmpeg/ffmpeg.min.js`, await new Promise((s, o) => {
+    t.src = `${e}/libs/ffmpeg/ffmpeg.min.js`, await new Promise((s, a) => {
       t.onload = async () => {
         try {
           const { FFmpeg: r } = window.FFmpegWASM, n = new r();
@@ -933,43 +936,43 @@ async function W(i = {}) {
             wasmURL: `${e}/libs/ffmpeg/ffmpeg-core.wasm`
           }), window.ffmpegInstance = n, window.ffmpegInitialized = !0, console.log("FFmpeg loaded successfully"), s();
         } catch (r) {
-          o(r);
+          a(r);
         }
-      }, t.onerror = () => o(new Error("Failed to load FFmpeg script")), document.head.appendChild(t);
+      }, t.onerror = () => a(new Error("Failed to load FFmpeg script")), document.head.appendChild(t);
     });
   } catch (t) {
     throw console.error("Failed to load FFmpeg:", t), t;
   }
 }
-async function V(i = {}) {
+async function Q(i = {}) {
   const e = i.basePath || B();
   try {
-    await q(`${e}/libs/jszip/jszip.min.js`), console.log("JSZip loaded successfully");
+    await W(`${e}/libs/jszip/jszip.min.js`), console.log("JSZip loaded successfully");
   } catch (t) {
     throw console.error("Failed to load JSZip:", t), t;
   }
 }
-async function Q(i = {}) {
+async function H(i = {}) {
   try {
     await Promise.all([
-      W(i),
-      V(i)
+      V(i),
+      Q(i)
     ]), console.log("All rendering libraries loaded successfully");
   } catch (e) {
     throw console.error("Failed to load rendering libraries:", e), e;
   }
 }
 const F = 3005;
-function H() {
+function K() {
   const i = ["mp4", "zip"];
   return (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && i.push("node_mp4"), i;
 }
 async function L(i, e = {}) {
-  await Q(e.libraryConfig);
+  await H(e.libraryConfig);
   const {
     framerate: t = 60,
     codec: s = "libx264",
-    outputFile: o = "out.mp4",
+    outputFile: a = "out.mp4",
     onProgress: r,
     outputFormat: n = "mp4"
   } = e, l = i.getDuration(), h = [], d = 1 / t;
@@ -1011,10 +1014,10 @@ async function L(i, e = {}) {
       "yuv420p",
       "-crf",
       "18",
-      o
+      a
     ]), r && r(0.9);
-    const m = await c.readFile(o), u = new Blob([m.buffer], { type: "video/mp4" }), b = URL.createObjectURL(u), w = document.createElement("a");
-    w.href = b, w.download = o, document.body.appendChild(w), w.click(), document.body.removeChild(w), URL.revokeObjectURL(b);
+    const m = await c.readFile(a), u = new Blob([m.buffer], { type: "video/mp4" }), b = URL.createObjectURL(u), w = document.createElement("a");
+    w.href = b, w.download = a, document.body.appendChild(w), w.click(), document.body.removeChild(w), URL.revokeObjectURL(b);
   } else if (n === "node_mp4") {
     const c = `ws://${window.location.hostname}:${F}`;
     let m;
@@ -1057,7 +1060,7 @@ async function L(i, e = {}) {
           case "completed":
             r && r(0.98);
             const w = `http://${window.location.hostname}:${F}${b.downloadUrl}`, P = document.createElement("a");
-            P.href = w, P.download = o, document.body.appendChild(P), P.click(), document.body.removeChild(P), r && r(1), m.close();
+            P.href = w, P.download = a, document.body.appendChild(P), P.click(), document.body.removeChild(P), r && r(1), m.close();
             break;
           case "error":
             throw console.error("Server error:", b.message), new Error(`Server error: ${b.message}`);
@@ -1078,7 +1081,7 @@ async function L(i, e = {}) {
     for (let P = 0; P < p.length; P++)
       m.file(y[P], p[P]);
     const u = await m.generateAsync({ type: "blob" }), b = URL.createObjectURL(u), w = document.createElement("a");
-    w.href = b, w.download = o.replace(/\.\w+$/, "") + ".zip", document.body.appendChild(w), w.click(), document.body.removeChild(w), URL.revokeObjectURL(b);
+    w.href = b, w.download = a.replace(/\.\w+$/, "") + ".zip", document.body.appendChild(w), w.click(), document.body.removeChild(w), URL.revokeObjectURL(b);
   }
   async function T(c, m) {
     for (let u = 0; u < m.length; u++) {
@@ -1090,7 +1093,7 @@ async function L(i, e = {}) {
   }
   g && i.play(), r && r(1);
 }
-const K = `
+const J = `
 body {
   margin: 0;
   background: #181818;
@@ -1340,40 +1343,40 @@ body {
   transition: width 0.1s linear;
 }
 `;
-function J() {
-  const i = document.createElement("style");
-  i.id = "mation-styles", i.textContent = K, document.head.appendChild(i);
-}
 function ee() {
+  const i = document.createElement("style");
+  i.id = "mation-styles", i.textContent = J, document.head.appendChild(i);
+}
+function te() {
   const i = document.getElementById("mation-styles");
   i && i.remove();
 }
-class se {
+class I {
   constructor(e = {}) {
-    a(this, "scene");
-    a(this, "playPauseButton", null);
-    a(this, "scrubber", null);
-    a(this, "timeDisplay", null);
-    a(this, "renderButton", null);
-    a(this, "renderDropdown", null);
-    a(this, "renderOptions", null);
-    a(this, "dropdownToggle", null);
-    a(this, "selectedFormat", "mp4");
-    a(this, "progressContainer", null);
-    a(this, "progressBar", null);
-    a(this, "loopButton", null);
-    a(this, "isPlaying", !0);
-    a(this, "isDragging", !1);
-    a(this, "wasPlayingBeforeDrag", !1);
-    a(this, "isRendering", !1);
-    a(this, "loop", !1);
-    a(this, "options");
-    a(this, "updateScrubber", () => {
+    o(this, "scene");
+    o(this, "playPauseButton", null);
+    o(this, "scrubber", null);
+    o(this, "timeDisplay", null);
+    o(this, "renderButton", null);
+    o(this, "renderDropdown", null);
+    o(this, "renderOptions", null);
+    o(this, "dropdownToggle", null);
+    o(this, "selectedFormat", "mp4");
+    o(this, "progressContainer", null);
+    o(this, "progressBar", null);
+    o(this, "loopButton", null);
+    o(this, "isPlaying", !0);
+    o(this, "isDragging", !1);
+    o(this, "wasPlayingBeforeDrag", !1);
+    o(this, "isRendering", !1);
+    o(this, "loop", !1);
+    o(this, "options");
+    o(this, "updateScrubber", () => {
       if (!this.isDragging && this.scrubber && this.scene) {
         const e = this.scene.getCurrentTime(), t = this.scene.getDuration();
         if (t > 0) {
           const s = Math.min(Math.floor(e / t * 1e3), 1e3);
-          this.scrubber.value = s.toString(), this.updateTimeDisplay(e, t), e >= t && this.isPlaying && (this.isPlaying = !1, this.playPauseButton && (this.playPauseButton.textContent = "▶️"));
+          this.scrubber.value = s.toString(), this.updateTimeDisplay(e, t), e >= t && this.isPlaying && (this.isPlaying = this.loop, this.playPauseButton && !this.isPlaying && (this.playPauseButton.textContent = "▶️"));
         }
       }
       requestAnimationFrame(this.updateScrubber);
@@ -1389,7 +1392,11 @@ class se {
       enablePan: !0,
       enableShortcuts: !0,
       ...e
-    }, this.loop = this.options.loop || !1, this.isPlaying = this.options.autoplay || !1, this.options.injectStyles && J();
+    }, this.loop = this.options.loop || !1, this.isPlaying = !1, this.options.injectStyles && ee();
+  }
+  static async create(e, t, s = {}) {
+    const a = new I(s), r = document.createElement("canvas");
+    return e.append(r), a.setScene(t(r)), await a.initialize(e), a;
   }
   /**
    * Set the scene to be controlled by this Mation instance
@@ -1422,7 +1429,7 @@ class se {
     if (this.options.showUI && this.setupControls(e), (this.options.enableZoom || this.options.enablePan) && !this.options.showUI && this.setupZoomPanEvents(), this.scene) {
       await this.scene.runSequence();
       const t = this.scene.getDuration(), s = this.scene.getCurrentTime();
-      this.options.showUI && this.updateTimeDisplay(s, t), this.isPlaying ? this.scene.play() : this.scene.pause(), this.options.showUI && this.playPauseButton && (this.playPauseButton.textContent = this.isPlaying ? "⏸️" : "▶️");
+      this.scene.seekToTime(0), this.options.showUI && this.updateTimeDisplay(s, t), this.isPlaying = this.options.autoplay ?? !1, this.isPlaying ? this.scene.play() : this.scene.pause(), this.options.showUI && this.playPauseButton && (this.playPauseButton.textContent = this.isPlaying ? "⏸️" : "▶️");
     }
     this.updateScrubber(), window.mation = this, window.render = async (t = "mp4") => {
       this.scene ? await L(this.scene, {
@@ -1445,7 +1452,7 @@ class se {
    * Call this when you're done with the Mation instance to clean up resources
    */
   destroy() {
-    this.scene && this.scene.pause(), this.options.injectStyles && ee(), window.mation === this && (delete window.mation, delete window.render, delete window.setTargetFPS);
+    this.scene && this.scene.pause(), this.options.injectStyles && te(), window.mation === this && (delete window.mation, delete window.render, delete window.setTargetFPS);
   }
   // Set up just the zoom and pan events without UI
   setupZoomPanEvents() {
@@ -1456,14 +1463,14 @@ class se {
     t.className = "animation-controls", e.appendChild(t), this.playPauseButton = document.createElement("button"), this.playPauseButton.className = "play-pause-button", this.playPauseButton.textContent = "⏸️", t.appendChild(this.playPauseButton);
     const s = document.createElement("button");
     s.className = "reset-zoom-button", s.textContent = "🔍", s.title = "Reset Zoom", e.appendChild(s);
-    const o = document.createElement("div");
-    o.className = "scrubber-container", t.appendChild(o);
+    const a = document.createElement("div");
+    a.className = "scrubber-container", t.appendChild(a);
     const r = document.createElement("div");
-    if (r.className = "right-controls-wrapper", o.appendChild(r), this.timeDisplay = document.createElement("div"), this.timeDisplay.className = "time-display", this.timeDisplay.textContent = "0.00 / 0.00", r.appendChild(this.timeDisplay), this.loopButton = document.createElement("button"), this.loopButton.className = "loop-button", this.loopButton.textContent = "🔁", this.loopButton.title = this.loop ? "Loop On" : "Loop Off", this.loopButton.style.opacity = this.loop ? "1.0" : "0.5", r.appendChild(this.loopButton), this.scrubber = document.createElement("input"), this.scrubber.type = "range", this.scrubber.min = "0", this.scrubber.max = "1000", this.scrubber.value = "0", this.scrubber.className = "scrubber", o.appendChild(this.scrubber), this.options.enableZoom || this.options.enablePan ? s.style.display = "flex" : s.style.display = "none", this.options.enableRendering) {
+    if (r.className = "right-controls-wrapper", a.appendChild(r), this.timeDisplay = document.createElement("div"), this.timeDisplay.className = "time-display", this.timeDisplay.textContent = "0.00 / 0.00", r.appendChild(this.timeDisplay), this.loopButton = document.createElement("button"), this.loopButton.className = "loop-button", this.loopButton.textContent = "🔁", this.loopButton.title = this.loop ? "Loop On" : "Loop Off", this.loopButton.style.opacity = this.loop ? "1.0" : "0.5", r.appendChild(this.loopButton), this.scrubber = document.createElement("input"), this.scrubber.type = "range", this.scrubber.min = "0", this.scrubber.max = "1000", this.scrubber.value = "0", this.scrubber.className = "scrubber", a.appendChild(this.scrubber), this.options.enableZoom || this.options.enablePan ? s.style.display = "flex" : s.style.display = "none", this.options.enableRendering) {
       this.renderDropdown = document.createElement("div"), this.renderDropdown.className = "render-dropdown", e.appendChild(this.renderDropdown);
       const n = document.createElement("div");
       n.className = "button-container", this.renderDropdown.appendChild(n), this.renderButton = document.createElement("button"), this.renderButton.className = "render-button", this.renderButton.textContent = "Render MP4", n.appendChild(this.renderButton), this.dropdownToggle = document.createElement("button"), this.dropdownToggle.className = "dropdown-toggle", this.dropdownToggle.innerHTML = "▼", n.appendChild(this.dropdownToggle), this.renderOptions = document.createElement("div"), this.renderOptions.className = "render-options", this.renderDropdown.appendChild(this.renderOptions);
-      const l = H(), h = document.createElement("div");
+      const l = K(), h = document.createElement("div");
       h.className = "render-option selected", h.textContent = "MP4 Video", h.dataset.format = "mp4", this.renderOptions.appendChild(h);
       const d = document.createElement("div");
       if (d.className = "render-option", d.textContent = "PNG Sequence (ZIP)", d.dataset.format = "zip", this.renderOptions.appendChild(d), l.includes("node_mp4")) {
@@ -1497,14 +1504,14 @@ class se {
         this.scene && this.scene.setPerformingPreviewAction(!1), e = null;
       }, 200);
     }, { passive: !1 });
-    let t = !1, s = 0, o = 0;
+    let t = !1, s = 0, a = 0;
     (f = this.scene.canvas) == null || f.addEventListener("mousedown", (c) => {
-      !this.scene || !this.options.enablePan || c.altKey && (this.scene.setPerformingPreviewAction(!0), t = !0, s = c.clientX, o = c.clientY);
+      !this.scene || !this.options.enablePan || c.altKey && (this.scene.setPerformingPreviewAction(!0), t = !0, s = c.clientX, a = c.clientY);
     }), (p = this.scene.canvas) == null || p.addEventListener("mousemove", (c) => {
       if (!this.scene || !t || !this.options.enablePan)
         return;
-      const m = c.clientX - s, u = c.clientY - o, [b, w] = this.scene.pan;
-      this.scene.setPan([b + m, w + u]), s = c.clientX, o = c.clientY;
+      const m = c.clientX - s, u = c.clientY - a, [b, w] = this.scene.pan;
+      this.scene.setPan([b + m, w + u]), s = c.clientX, a = c.clientY;
     }), document.addEventListener("mouseup", () => {
       var c;
       t && (t = !1, (c = this.scene) == null || c.setPerformingPreviewAction(!1));
@@ -1524,23 +1531,23 @@ class se {
         const m = c.touches[0], u = c.touches[1], b = this.options.enableZoom, w = this.options.enablePan;
         if (!b && !w)
           return;
-        const P = (m.clientX + u.clientX) / 2, E = (m.clientY + u.clientY) / 2, S = this.scene.canvas.getBoundingClientRect(), I = P - S.left, D = E - S.top;
-        if (this.scene.setMousePosition(I, D), b) {
-          const v = Math.hypot(
+        const P = (m.clientX + u.clientX) / 2, E = (m.clientY + u.clientY) / 2, S = this.scene.canvas.getBoundingClientRect(), D = P - S.left, M = E - S.top;
+        if (this.scene.setMousePosition(D, M), b) {
+          const x = Math.hypot(
             u.clientX - m.clientX,
             u.clientY - m.clientY
           ) / r;
-          this.scene.setZoom(n * v);
+          this.scene.setZoom(n * x);
         }
         if (w) {
-          const C = P - l, v = E - h, [M, O] = this.scene.pan;
-          this.scene.setPan([M + C, O + v]), l = P, h = E;
+          const C = P - l, x = E - h, [O, U] = this.scene.pan;
+          this.scene.setPan([O + C, U + x]), l = P, h = E;
         }
       }
     }, { passive: !1 });
   }
   setupEventListeners() {
-    var t, s, o, r, n, l, h, d;
+    var t, s, a, r, n, l, h, d;
     this.setupPanZoomEventListeners(), this.options.enableShortcuts && this.setupKeyboardShortcuts(), (t = this.playPauseButton) == null || t.addEventListener("click", () => {
       this.scene && (this.isPlaying ? (this.scene.pause(), this.playPauseButton && (this.playPauseButton.textContent = "▶️")) : (this.scene.getCurrentTime() >= this.scene.getDuration() && this.scene.seekToTime(0), this.scene.play(), this.playPauseButton && (this.playPauseButton.textContent = "⏸️")), this.isPlaying = !this.isPlaying);
     }), (s = this.loopButton) == null || s.addEventListener("click", () => {
@@ -1552,7 +1559,7 @@ class se {
         return;
       const g = this.scene.canvas.width, f = this.scene.canvas.height;
       this.scene.setMousePosition(g / 2, f / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
-    }), (o = this.scrubber) == null || o.addEventListener("mousedown", () => {
+    }), (a = this.scrubber) == null || a.addEventListener("mousedown", () => {
       this.scene && (this.isDragging = !0, this.wasPlayingBeforeDrag = this.isPlaying, this.scene.pause(), this.scene.setPerformingPreviewAction(!0));
     }), (r = this.scrubber) == null || r.addEventListener("touchstart", () => {
       this.scene && (this.isDragging = !0, this.wasPlayingBeforeDrag = this.isPlaying, this.scene.pause(), this.scene.setPerformingPreviewAction(!0));
@@ -1611,12 +1618,12 @@ class se {
         this.scene.setMousePosition(r / 2, n / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
       }
       e.key === " " && (e.preventDefault(), this.isPlaying ? (this.scene.pause(), this.playPauseButton && (this.playPauseButton.textContent = "▶️")) : (this.scene.getCurrentTime() >= this.scene.getDuration() && this.scene.seekToTime(0), this.scene.play(), this.playPauseButton && (this.playPauseButton.textContent = "⏸️")), this.isPlaying = !this.isPlaying);
-      const s = 1 / this.scene.getTargetFPS(), o = s * 60;
+      const s = 1 / this.scene.getTargetFPS(), a = s * 60;
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault(), this.isPlaying && (this.scene.pause(), this.isPlaying = !1, this.playPauseButton && (this.playPauseButton.textContent = "▶️"));
         const n = this.scene.getCurrentTime(), l = this.scene.getDuration();
         let h;
-        const d = e.shiftKey ? o : s;
+        const d = e.shiftKey ? a : s;
         if (e.key === "ArrowLeft" ? h = Math.max(0, n - d) : h = Math.min(l, n + d), this.scene.seekToTime(h), this.updateTimeDisplay(h, l), this.scrubber) {
           const g = Math.min(Math.floor(h / l * 1e3), 1e3);
           this.scrubber.value = g.toString();
@@ -1627,21 +1634,24 @@ class se {
   updateTimeDisplay(e, t) {
     this.timeDisplay && (this.timeDisplay.textContent = `${e.toFixed(2)}s / ${t.toFixed(2)}s`);
   }
+  static isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
 }
 export {
   R as Easing,
-  ie as Layer,
-  se as Mation,
+  se as Layer,
+  I as Mation,
   _ as Scene,
-  z as WebGLPipeline,
-  G as createPipeline,
-  se as default,
-  H as getAvailableFormats,
-  J as injectStyles,
-  W as loadFFmpeg,
-  V as loadJSZip,
-  Q as loadRenderingLibraries,
-  ee as removeStyles,
+  Y as WebGLPipeline,
+  Z as createPipeline,
+  I as default,
+  K as getAvailableFormats,
+  ee as injectStyles,
+  V as loadFFmpeg,
+  Q as loadJSZip,
+  H as loadRenderingLibraries,
+  te as removeStyles,
   L as renderToVideo
 };
 //# sourceMappingURL=mation.js.map

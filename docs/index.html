@@ -186,7 +186,7 @@ void main() {
           oneOverSize: [1.0 / this.width, 1.0 / this.height],
           sceneTexture: null,
           distanceTexture: null,
-          rayCount: 32,
+          rayCount: 16,
           maxSteps: 80,
           sunAngle: 0.4,
           enableSun: false,
@@ -435,7 +435,7 @@ void main() {
           uniforms: {
             distanceTexture,
             sceneTexture,
-            rayCount: previewAction ? 8 : 128
+            rayCount: previewAction ? 8 : 16
           }
         });
         return giRenderTargets[0].texture;
@@ -669,39 +669,32 @@ void main() {
     }
   }
 
+  /**
+   * If it's high-dpi, scale it.
+   * If it's mobile, make it smaller.
+   * @returns {{width: number, height: number}}
+   */
+  function bounds() {
+    const dpr = window.devicePixelRatio || 1;
+    const windowWidth = window.innerWidth * dpr;
+    const ratio = Mation.isMobile() ? windowWidth / 1920 : 1;
+
+    let width = 1920 * ratio;
+    let height = 1080 * ratio;
+    return { width, height };
+  }
+
   document.addEventListener('DOMContentLoaded', async () => {
     const app = document.querySelector("#preview");
     if (!app) return;
 
-    // Create canvas
-    const canvas = document.createElement("canvas");
+    const { width, height } = bounds();
 
-    const isMobile = (() => {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    })();
-
-    const dpr = window.devicePixelRatio || 1;
-    const windowWidth = window.innerWidth * dpr;
-    const ratio = isMobile ? windowWidth / 1920 : 1;
-
-    let width = 1920 * ratio;
-    let height = 1080 * ratio;
-
-    canvas.width = width;
-    canvas.height = height;
-    app.append(canvas);
-
-    // Create Mation instance
-    const mation = new Mation({ autoplay: true, loop: true, showUI: true });
-
-    const scene = new MyScene({canvas, width, height});
-
-    // Set the scene on the Mation instance
-    mation.setScene(scene);
-
-    // Initialize Mation (this will create UI controls and start the animation)
-    await mation.initialize(app);
+    Mation.create(
+      app,
+      (canvas) => new MyScene({canvas, width, height}),
+      { autoplay: true, loop: true, showUI: true }
+    );
   });
 </script>
 </body>
