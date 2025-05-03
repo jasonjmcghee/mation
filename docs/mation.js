@@ -22,11 +22,11 @@ class z {
     o(this, "instancedAttributes");
     o(this, "numInstances");
     o(this, "isInstanced");
-    const { fragmentShader: a, vertexShader: r, uniforms: n, name: l, instanceAttributes: h, numInstances: d } = s;
-    this.vertexShader = r ?? X, this.fragmentShader = a, this.program = e.createProgram(
+    const { fragmentShader: a, vertexShader: n, uniforms: r, name: l, instanceAttributes: h, numInstances: d } = s;
+    this.vertexShader = n ?? X, this.fragmentShader = a, this.program = e.createProgram(
       `${A}${this.vertexShader}`,
       `${A}${this.fragmentShader}`
-    ), this.uniforms = n, this.quad = t, this.name = l || "", e.programs.set(l || "", this.program), this.w = e, this.instancedAttributes = {}, this.numInstances = d || 1, this.isInstanced = !!h && Object.keys(h).length > 0;
+    ), this.uniforms = r, this.quad = t, this.name = l || "", e.programs.set(l || "", this.program), this.w = e, this.instancedAttributes = {}, this.numInstances = d || 1, this.isInstanced = !!h && Object.keys(h).length > 0;
   }
   setInstanceAttribute(e, t, s) {
     this.instancedAttributes[e] = this.w.createInstancedAttribute(t, s), this.isInstanced = !0;
@@ -69,19 +69,19 @@ class Y {
     return this.w.createInstancedAttribute(e, t);
   }
   add(e, t = {}, s = {}) {
-    const a = s.dpr || window.devicePixelRatio || 1, r = s.scale ? a : 1, n = this.w, l = this.w.canvas, h = this.w.canvas.width, d = this.w.canvas.height;
-    n.gl.viewport(0, 0, l.width, l.height);
+    const a = s.dpr || window.devicePixelRatio || 1, n = s.scale ? a : 1, r = this.w, l = this.w.canvas, h = this.w.canvas.width, d = this.w.canvas.height;
+    r.gl.viewport(0, 0, l.width, l.height);
     const g = {
-      minFilter: n.gl.NEAREST,
-      magFilter: n.gl.NEAREST,
-      internalFormat: n.gl.RGBA16F,
-      format: n.gl.RGBA,
-      type: n.gl.HALF_FLOAT,
+      minFilter: r.gl.NEAREST,
+      magFilter: r.gl.NEAREST,
+      internalFormat: r.gl.RGBA16F,
+      format: r.gl.RGBA,
+      type: r.gl.HALF_FLOAT,
       ...t
     }, f = (s == null ? void 0 : s.renderTargetCount) ?? 2, p = [];
     for (let T = 0; T < f; T++)
       p.push(
-        n.createRenderTarget(h * r, d * r, g)
+        r.createRenderTarget(h * n, d * n, g)
       );
     const y = this.createPass(e);
     return {
@@ -90,7 +90,7 @@ class Y {
         y.render({ uniforms: T == null ? void 0 : T.uniforms, renderTarget: T == null ? void 0 : T.renderTarget });
       },
       renderTargets: p,
-      renderer: n,
+      renderer: r,
       scaling: a,
       uniforms: y.uniforms,
       gl: this.gl(),
@@ -98,7 +98,7 @@ class Y {
     };
   }
   createPass(e) {
-    const { name: t, instanceAttributes: s } = e, a = `pass-${Object.keys(this.passes).length}:-${t ?? ""}`, r = new z(
+    const { name: t, instanceAttributes: s } = e, a = `pass-${Object.keys(this.passes).length}:-${t ?? ""}`, n = new z(
       this.w,
       this.quad,
       {
@@ -107,9 +107,9 @@ class Y {
       }
     );
     if (s)
-      for (const [n, { data: l, itemSize: h }] of Object.entries(s))
-        r.setInstanceAttribute(n, l, h);
-    return this.passes[a] = r, r;
+      for (const [r, { data: l, itemSize: h }] of Object.entries(s))
+        n.setInstanceAttribute(r, l, h);
+    return this.passes[a] = n, n;
   }
   gl() {
     return this.w.gl;
@@ -140,8 +140,8 @@ class G {
     // Track the active instanced attributes to ensure proper cleanup
     o(this, "activeInstancedAttributes", /* @__PURE__ */ new Set());
     this.canvas = e;
-    const s = (t == null ? void 0 : t.dpr) ?? (window.devicePixelRatio || 1), a = (t == null ? void 0 : t.canvasScale) ?? 1 / s, r = e.width, n = e.height;
-    "style" in e && (e.style.width = `${r * a}px`, e.style.height = `${n * a}px`);
+    const s = (t == null ? void 0 : t.dpr) ?? (window.devicePixelRatio || 1), a = (t == null ? void 0 : t.canvasScale) ?? 1 / s, n = e.width, r = e.height;
+    "style" in e && (e.style.width = `${n * a}px`, e.style.height = `${r * a}px`);
     const l = e.getContext("webgl2", { antialiasing: !1, alpha: !1 });
     if (!l)
       throw new Error("WebGL2 not supported");
@@ -157,12 +157,12 @@ class G {
       this.gl.disableVertexAttribArray(d), this.gl.vertexAttribDivisor(d, 0);
   }
   createProgram(e, t) {
-    const s = this.createShader(this.gl.VERTEX_SHADER, e), a = this.createShader(this.gl.FRAGMENT_SHADER, t), r = this.gl.createProgram();
-    if (!r)
+    const s = this.createShader(this.gl.VERTEX_SHADER, e), a = this.createShader(this.gl.FRAGMENT_SHADER, t), n = this.gl.createProgram();
+    if (!n)
       throw new Error("Failed to create WebGL program");
-    if (this.gl.attachShader(r, s), this.gl.attachShader(r, a), this.gl.linkProgram(r), !this.gl.getProgramParameter(r, this.gl.LINK_STATUS))
-      throw new Error("Unable to initialize the shader program: " + this.gl.getProgramInfoLog(r));
-    return r;
+    if (this.gl.attachShader(n, s), this.gl.attachShader(n, a), this.gl.linkProgram(n), !this.gl.getProgramParameter(n, this.gl.LINK_STATUS))
+      throw new Error("Unable to initialize the shader program: " + this.gl.getProgramInfoLog(n));
+    return n;
   }
   addLineNumbers(e) {
     return e.split(`
@@ -182,16 +182,16 @@ ${this.addLineNumbers(t)}`);
     const a = this.gl.createTexture();
     if (!a)
       throw new Error("Failed to create WebGL texture");
-    const r = new Image();
-    r.src = e;
-    const n = this;
-    return r.onload = function() {
+    const n = new Image();
+    n.src = e;
+    const r = this;
+    return n.onload = function() {
       const l = document.createElement("canvas");
-      l.width = r.width, l.height = r.height;
+      l.width = n.width, l.height = n.height;
       const h = l.getContext("2d");
       if (!h)
         throw new Error("Failed to get 2D context");
-      h.drawImage(r, 0, r.height), n.createTextureFromCanvas(l), t && t();
+      h.drawImage(n, 0, n.height), r.createTextureFromCanvas(l), t && t();
     }, a;
   }
   createTextureFromCanvas(e) {
@@ -205,8 +205,8 @@ ${this.addLineNumbers(t)}`);
   createRenderTarget(e, t, s = {}, a) {
     const {
       // generateMipmaps,
-      minFilter: r,
-      magFilter: n,
+      minFilter: n,
+      magFilter: r,
       internalFormat: l,
       format: h,
       type: d
@@ -220,7 +220,7 @@ ${this.addLineNumbers(t)}`);
     const p = this.gl.createTexture();
     if (!p)
       throw new Error("Failed to create texture");
-    this.gl.bindTexture(this.gl.TEXTURE_2D, p), this.gl.texImage2D(this.gl.TEXTURE_2D, 0, l, e, t, 0, h, d, null), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, r), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, n), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE), this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, p, 0);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, p), this.gl.texImage2D(this.gl.TEXTURE_2D, 0, l, e, t, 0, h, d, null), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, n), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, r), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE), this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE), this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, p, 0);
     const y = this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER);
     if (y !== this.gl.FRAMEBUFFER_COMPLETE)
       throw new Error("Framebuffer is not complete: " + y);
@@ -253,20 +253,20 @@ ${this.addLineNumbers(t)}`);
       throw new Error(`Render target "${e}" not found`);
     return t.texture;
   }
-  setUniform(e, t, s, a, r, n) {
-    const l = e.getUniformLocation(a, r);
+  setUniform(e, t, s, a, n, r) {
+    const l = e.getUniformLocation(a, n);
     if (l === null)
       return;
     let h = null;
     for (let p = 0; p < s; p++) {
       const y = e.getActiveUniform(a, p);
-      if (y && y.name === r) {
+      if (y && y.name === n) {
         h = y;
         break;
       }
     }
     if (!h) {
-      console.warn(`Unable to find uniform info for "${r}"`);
+      console.warn(`Unable to find uniform info for "${n}"`);
       return;
     }
     const { type: d, size: g } = h;
@@ -275,49 +275,49 @@ ${this.addLineNumbers(t)}`);
     }
     switch (d) {
       case e.FLOAT:
-        e.uniform1f(l, n);
+        e.uniform1f(l, r);
         break;
       case e.INT:
       case e.BOOL:
-        e.uniform1i(l, n);
+        e.uniform1i(l, r);
         break;
       case e.FLOAT_VEC2:
-        e.uniform2fv(l, f(n, Float32Array));
+        e.uniform2fv(l, f(r, Float32Array));
         break;
       case e.FLOAT_VEC3:
-        e.uniform3fv(l, f(n, Float32Array));
+        e.uniform3fv(l, f(r, Float32Array));
         break;
       case e.FLOAT_VEC4:
-        e.uniform4fv(l, f(n, Float32Array));
+        e.uniform4fv(l, f(r, Float32Array));
         break;
       case e.INT_VEC2:
       case e.BOOL_VEC2:
-        e.uniform2iv(l, f(n, Int32Array));
+        e.uniform2iv(l, f(r, Int32Array));
         break;
       case e.INT_VEC3:
       case e.BOOL_VEC3:
-        e.uniform3iv(l, f(n, Int32Array));
+        e.uniform3iv(l, f(r, Int32Array));
         break;
       case e.INT_VEC4:
       case e.BOOL_VEC4:
-        e.uniform4iv(l, f(n, Int32Array));
+        e.uniform4iv(l, f(r, Int32Array));
         break;
       case e.FLOAT_MAT2:
-        e.uniformMatrix2fv(l, !1, f(n, Float32Array));
+        e.uniformMatrix2fv(l, !1, f(r, Float32Array));
         break;
       case e.FLOAT_MAT3:
-        e.uniformMatrix3fv(l, !1, f(n, Float32Array));
+        e.uniformMatrix3fv(l, !1, f(r, Float32Array));
         break;
       case e.FLOAT_MAT4:
-        e.uniformMatrix4fv(l, !1, f(n, Float32Array));
+        e.uniformMatrix4fv(l, !1, f(r, Float32Array));
         break;
       case e.SAMPLER_2D:
       case e.SAMPLER_CUBE:
         const p = t.length;
-        this.gl.activeTexture(this.gl.TEXTURE0 + p), t.push(p), this.gl.bindTexture(this.gl.TEXTURE_2D, n), this.gl.uniform1i(l, p), n != null && this.gl.generateMipmap(this.gl.TEXTURE_2D);
+        this.gl.activeTexture(this.gl.TEXTURE0 + p), t.push(p), this.gl.bindTexture(this.gl.TEXTURE_2D, r), this.gl.uniform1i(l, p), r != null && this.gl.generateMipmap(this.gl.TEXTURE_2D);
         break;
       default:
-        d === e.FLOAT && g > 1 ? e.uniform1fv(l, f(n, Float32Array)) : (d === e.INT || d === e.BOOL) && g > 1 ? e.uniform1iv(l, f(n, Int32Array)) : console.warn(`Unsupported uniform type: ${d}`);
+        d === e.FLOAT && g > 1 ? e.uniform1fv(l, f(r, Float32Array)) : (d === e.INT || d === e.BOOL) && g > 1 ? e.uniform1iv(l, f(r, Int32Array)) : console.warn(`Unsupported uniform type: ${d}`);
         break;
     }
   }
@@ -327,15 +327,15 @@ ${this.addLineNumbers(t)}`);
       throw new Error(`Program "${e}" not found`);
     try {
       this.gl.useProgram(a);
-      const r = [], n = this.gl.getProgramParameter(a, this.gl.ACTIVE_UNIFORMS);
+      const n = [], r = this.gl.getProgramParameter(a, this.gl.ACTIVE_UNIFORMS);
       for (const [d, g] of Object.entries(t))
-        this.setUniform(this.gl, r, n, a, d, g);
+        this.setUniform(this.gl, n, r, a, d, g);
       const l = this.setupAttributes(a, s), h = s.numInstances || 1;
       s.instanceAttributes && Object.keys(s.instanceAttributes).length > 0 ? this.gl.drawArraysInstanced(this.gl.TRIANGLE_STRIP, 0, l, h) : this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, l);
     } finally {
       this.resetInstancedAttributes();
-      for (let r = 0; r < 16; r++)
-        this.gl.activeTexture(this.gl.TEXTURE0 + r), this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+      for (let n = 0; n < 16; n++)
+        this.gl.activeTexture(this.gl.TEXTURE0 + n), this.gl.bindTexture(this.gl.TEXTURE_2D, null);
       this.gl.useProgram(null);
     }
   }
@@ -344,24 +344,24 @@ ${this.addLineNumbers(t)}`);
     for (let a = 0; a < s; a++)
       this.gl.disableVertexAttribArray(a), this.gl.vertexAttribDivisor(a, 0);
     this.activeAttributes.clear(), this.activeInstancedAttributes.clear();
-    for (const [a, r] of Object.entries(t)) {
+    for (const [a, n] of Object.entries(t)) {
       if (a === "instanceAttributes" || a === "numInstances")
         continue;
-      const n = this.gl.getAttribLocation(e, a);
-      if (n === -1) {
+      const r = this.gl.getAttribLocation(e, a);
+      if (r === -1) {
         console.warn(`Attribute "${a}" not found in shader program`);
         continue;
       }
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, r.buffer), this.gl.enableVertexAttribArray(n), this.gl.vertexAttribPointer(n, r.size, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(n, 0), this.activeAttributes.add(n);
+      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, n.buffer), this.gl.enableVertexAttribArray(r), this.gl.vertexAttribPointer(r, n.size, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(r, 0), this.activeAttributes.add(r);
     }
     if (t.instanceAttributes)
-      for (const [a, r] of Object.entries(t.instanceAttributes)) {
-        const n = this.gl.getAttribLocation(e, a);
-        if (n === -1) {
+      for (const [a, n] of Object.entries(t.instanceAttributes)) {
+        const r = this.gl.getAttribLocation(e, a);
+        if (r === -1) {
           console.warn(`Instanced attribute "${a}" not found in shader program`);
           continue;
         }
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, r.buffer), this.gl.enableVertexAttribArray(n), this.gl.vertexAttribPointer(n, r.itemSize, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(n, 1), this.activeInstancedAttributes.add(n);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, n.buffer), this.gl.enableVertexAttribArray(r), this.gl.vertexAttribPointer(r, n.itemSize, this.gl.FLOAT, !1, 0, 0), this.gl.vertexAttribDivisor(r, 1), this.activeInstancedAttributes.add(r);
       }
     return 4;
   }
@@ -468,15 +468,15 @@ void main() {
       const e = performance.now(), t = e - this.lastRenderTime;
       if (t >= this.frameInterval || this.lastRenderTime === 0)
         if (this.lastRenderTime = e, this.isPlaying) {
-          const a = t / 1e3, r = this.currentTime;
-          this.setCurrentTime(Math.min(this.currentTime + a, this.totalDuration)), this.renderAtTime(this.currentTime), this.savePlayerState(), this.onFrame && this.onFrame(), this.currentTime >= this.totalDuration && ((s = window.mation) != null && s.loop ? (this.setCurrentTime(0), this.isPlaying = !0) : (this.isPlaying = !1, r < this.totalDuration && this.renderAtTime(this.totalDuration)), this.savePlayerState());
+          const a = t / 1e3, n = this.currentTime;
+          this.setCurrentTime(Math.min(this.currentTime + a, this.totalDuration)), this.renderAtTime(this.currentTime), this.savePlayerState(), this.onFrame && this.onFrame(), this.currentTime >= this.totalDuration && ((s = window.mation) != null && s.loop ? (this.setCurrentTime(0), this.isPlaying = !0) : (this.isPlaying = !1, n < this.totalDuration && this.renderAtTime(this.totalDuration)), this.savePlayerState());
         } else
           this.renderQueued && (this.renderAtTime(this.currentTime), this.renderQueued = !1);
       this.isPlaying && (this.renderQueued = !0), this.isPlaying || this.renderQueued ? this.animationId = requestAnimationFrame(this.renderLoop) : this.animationId = null;
     });
     this.canvas = e, this.canvas.width = t, this.canvas.height = s, this.width = t, this.height = s;
-    const { ctx: a, texturePipelineResult: r, defaultLayerCanvas: n } = this.initialize();
-    this.ctx = a, this.texturePipelineResult = r, this.defaultLayerCanvas = n;
+    const { ctx: a, texturePipelineResult: n, defaultLayerCanvas: r } = this.initialize();
+    this.ctx = a, this.texturePipelineResult = n, this.defaultLayerCanvas = r;
   }
   get zoom() {
     return this._zoom;
@@ -495,10 +495,10 @@ void main() {
   }
   // Add debug logging to setZoom to see what's happening
   setZoom(e) {
-    const [t, s] = this.mousePosition, a = (t - this._pan[0]) / this._zoom, r = (s - this._pan[1]) / this._zoom;
+    const [t, s] = this.mousePosition, a = (t - this._pan[0]) / this._zoom, n = (s - this._pan[1]) / this._zoom;
     this._zoom = e;
-    const n = t - a * this._zoom, l = s - r * this._zoom;
-    this._pan[0] = n, this._pan[1] = l, this.queueRender(), this.savePlayerState();
+    const r = t - a * this._zoom, l = s - n * this._zoom;
+    this._pan[0] = r, this._pan[1] = l, this.queueRender(), this.savePlayerState();
   }
   setPan(e) {
     this._pan = e, this.queueRender(), this.savePlayerState();
@@ -610,14 +610,14 @@ void main() {
     var e, t, s, a;
     if ((t = (e = window.mation) == null ? void 0 : e.options) != null && t.cacheState)
       try {
-        const r = localStorage.getItem(v.PLAYER_STATE_KEY);
-        if (r) {
-          const n = JSON.parse(r);
-          console.log("Found saved state:", n), n.isPlaying !== void 0 && !((a = (s = window.mation) == null ? void 0 : s.options) != null && a.autoplay) && (this.isPlaying = n.isPlaying, console.log(`Restored playing state: ${this.isPlaying}`)), n.currentTime !== void 0 && (this.setCurrentTime(n.currentTime), console.log(`Stored time for later restoration: ${this.currentTime}`)), n.zoom !== void 0 && (this._zoom = n.zoom, console.log(`Restored zoom: ${this._zoom}`)), n.pan !== void 0 && (this._pan = n.pan, console.log(`Restored pan: ${this._pan}`));
+        const n = localStorage.getItem(v.PLAYER_STATE_KEY);
+        if (n) {
+          const r = JSON.parse(n);
+          console.log("Found saved state:", r), r.isPlaying !== void 0 && !((a = (s = window.mation) == null ? void 0 : s.options) != null && a.autoplay) && (this.isPlaying = r.isPlaying, console.log(`Restored playing state: ${this.isPlaying}`)), r.currentTime !== void 0 && (this.setCurrentTime(r.currentTime), console.log(`Stored time for later restoration: ${this.currentTime}`)), r.zoom !== void 0 && (this._zoom = r.zoom, console.log(`Restored zoom: ${this._zoom}`)), r.pan !== void 0 && (this._pan = r.pan, console.log(`Restored pan: ${this._pan}`));
         } else
           console.log("No saved player state found");
-      } catch (r) {
-        console.warn("Failed to restore player state:", r);
+      } catch (n) {
+        console.warn("Failed to restore player state:", n);
       }
   }
   clearPlayerState() {
@@ -660,8 +660,8 @@ void main() {
     this.clear();
     const e = this.totalDuration, t = this.currentTime, s = this.isPlaying, a = this.currentTime;
     if (this.setCurrentTime(0), this.totalDuration = 0, this.animationSegments = [], this.lastRenderTime = 0, await this.buildAnimationTimeline(), t > 0 || a > 0) {
-      const r = Math.max(t, a);
-      e !== this.totalDuration && r > this.totalDuration ? this.setCurrentTime(r >= e ? this.totalDuration : 0) : this.setCurrentTime(Math.min(r, this.totalDuration));
+      const n = Math.max(t, a);
+      e !== this.totalDuration && n > this.totalDuration ? this.setCurrentTime(n >= e ? this.totalDuration : 0) : this.setCurrentTime(Math.min(n, this.totalDuration));
     }
     return this.isPlaying = s, this.renderAtTime(this.currentTime), this.isPlaying && (this.lastRenderTime = performance.now(), this.startAnimationLoop()), this.savePlayerState(), Promise.resolve();
   }
@@ -717,14 +717,14 @@ void main() {
   renderAtTime(e) {
     const t = Math.max(0, Math.min(e, this.totalDuration));
     this.setCurrentTime(t), this.clear();
-    const s = this.animationSegments.filter((r) => r.startTime <= t);
-    s.sort((r, n) => r.startTime - n.startTime);
+    const s = this.animationSegments.filter((n) => n.startTime <= t);
+    s.sort((n, r) => n.startTime - r.startTime);
     const a = /* @__PURE__ */ new Map();
-    for (const r of s) {
-      const n = t - r.startTime;
+    for (const n of s) {
+      const r = t - n.startTime;
       let l;
-      n >= r.duration ? l = 1 : (l = Math.max(0, Math.min(n / r.duration, 1)), l = r.easing(l));
-      for (const h of r.elements)
+      r >= n.duration ? l = 1 : (l = Math.max(0, Math.min(r / n.duration, 1)), l = n.easing(l));
+      for (const h of n.elements)
         a.set(h, l);
     }
     this.renderFrame(a);
@@ -743,40 +743,40 @@ void main() {
   }
   // Core animation method - now updated to work with the timeline
   animate(e, t) {
-    const s = this.currentTime, a = t.delay || 0, r = s + a, n = t.duration;
+    const s = this.currentTime, a = t.delay || 0, n = s + a, r = t.duration;
     for (const h of e)
-      h.segmentStartTime = r, this.registerElement(h);
+      h.segmentStartTime = n, this.registerElement(h);
     const l = {
-      startTime: r,
-      duration: n,
+      startTime: n,
+      duration: r,
       elements: [...e],
       easing: t.easing || ((h) => h)
       // Default to linear easing if not provided
     };
-    this.animationSegments.push(l), this.totalDuration = Math.max(this.totalDuration, r + n), t != null && t.parallel || this.setCurrentTime(r + n);
+    this.animationSegments.push(l), this.totalDuration = Math.max(this.totalDuration, n + r), t != null && t.parallel || this.setCurrentTime(n + r);
   }
   renderElement(e, t, s) {
     e.update && e.update(s), e.draw(t, s, { layers: this.layerLookup });
   }
   renderFrame(e) {
     const t = this.currentTime, s = this.defaultLayerCanvas.getContext("2d");
-    s.clearRect(0, 0, this.defaultLayerCanvas.width, this.defaultLayerCanvas.height), s.save(), s.translate(this.pan[0], this.pan[1]), s.scale(this.zoom, this.zoom), Object.keys(this.layerInitialProperties).forEach((n) => {
-      const l = this.layerInitialProperties[n];
+    s.clearRect(0, 0, this.defaultLayerCanvas.width, this.defaultLayerCanvas.height), s.save(), s.translate(this.pan[0], this.pan[1]), s.scale(this.zoom, this.zoom), Object.keys(this.layerInitialProperties).forEach((r) => {
+      const l = this.layerInitialProperties[r];
       if (l) {
-        const h = this.layerLookup[n];
+        const h = this.layerLookup[r];
         Object.assign(h, l);
       }
     });
-    for (const n of this.defaultLayerElements) {
-      if (n.segmentStartTime !== void 0 && n.segmentStartTime > t)
+    for (const r of this.defaultLayerElements) {
+      if (r.segmentStartTime !== void 0 && r.segmentStartTime > t)
         continue;
-      const l = e.has(n) ? e.get(n) : 1;
-      this.renderElement(n, s, l);
+      const l = e.has(r) ? e.get(r) : 1;
+      this.renderElement(r, s, l);
     }
-    for (const n in this.layerElements) {
-      const l = this.layerLookup[n];
+    for (const r in this.layerElements) {
+      const l = this.layerLookup[r];
       if (this.performingPreviewAction && !l.renderDuringPreviewAction) {
-        const h = this.layerElements[n];
+        const h = this.layerElements[r];
         for (const d of h) {
           if (d.segmentStartTime !== void 0 && d.segmentStartTime > t)
             continue;
@@ -791,20 +791,20 @@ void main() {
       u_progress: 1
       // Always use full blending
     }), this.texturePipelineResult.renderer.setRenderTarget(null);
-    const r = this.texturePipelineResult.gl;
-    r.disable(r.SCISSOR_TEST), this.texturePipelineResult.render();
-    for (const n of this.layers)
-      if (!this.performingPreviewAction || n.renderDuringPreviewAction) {
-        const l = this.layerCanvases[n.name], h = l.getContext("2d");
+    const n = this.texturePipelineResult.gl;
+    n.disable(n.SCISSOR_TEST), this.texturePipelineResult.render();
+    for (const r of this.layers)
+      if (!this.performingPreviewAction || r.renderDuringPreviewAction) {
+        const l = this.layerCanvases[r.name], h = l.getContext("2d");
         h.clearRect(0, 0, l.width, l.height), h.save();
-        const d = this.zoom, g = this.pan, f = (n.x ?? 0) * d + g[0], p = (n.y ?? 0) * d + g[1], y = (n.width ?? l.width) * d, T = (n.height ?? l.height) * d;
-        if (n.isSubview)
+        const d = this.zoom, g = this.pan, f = (r.x ?? 0) * d + g[0], p = (r.y ?? 0) * d + g[1], y = (r.width ?? l.width) * d, T = (r.height ?? l.height) * d;
+        if (r.isSubview)
           h.translate(g[0], g[1]), h.scale(d, d);
         else {
           const b = y / this.canvas.width, w = T / this.canvas.height;
           h.translate(f, p), h.scale(b, w);
         }
-        const c = this.layerElements[n.name];
+        const c = this.layerElements[r.name];
         for (const b of c) {
           if (b.segmentStartTime !== void 0 && b.segmentStartTime > t)
             continue;
@@ -813,18 +813,18 @@ void main() {
         }
         h.restore();
         const m = this.getTextureForCanvas(l), u = this.texturePipelineResult.gl;
-        u.enable(u.BLEND), u.blendFunc(u.SRC_ALPHA, u.ONE_MINUS_SRC_ALPHA), u.enable(u.SCISSOR_TEST), n.ignorePanZoom ? u.scissor(
-          n.x ?? 0,
-          n.y ?? 0,
-          n.width ?? l.width,
-          n.height ?? l.height
+        u.enable(u.BLEND), u.blendFunc(u.SRC_ALPHA, u.ONE_MINUS_SRC_ALPHA), u.enable(u.SCISSOR_TEST), r.ignorePanZoom ? u.scissor(
+          r.x ?? 0,
+          r.y ?? 0,
+          r.width ?? l.width,
+          r.height ?? l.height
         ) : u.scissor(
           f,
           this.canvas.height - p - T,
           // WebGL has origin at bottom left
           y,
           T
-        ), n.render(m, 1, this.performingPreviewAction), u.disable(u.BLEND), u.disable(u.SCISSOR_TEST);
+        ), r.render(m, 1, this.performingPreviewAction), u.disable(u.BLEND), u.disable(u.SCISSOR_TEST);
       }
     s.restore();
   }
@@ -930,13 +930,13 @@ async function V(i = {}) {
     t.src = `${e}/libs/ffmpeg/ffmpeg.min.js`, await new Promise((s, a) => {
       t.onload = async () => {
         try {
-          const { FFmpeg: r } = window.FFmpegWASM, n = new r();
-          await n.load({
+          const { FFmpeg: n } = window.FFmpegWASM, r = new n();
+          await r.load({
             coreURL: `${e}/libs/ffmpeg/ffmpeg-core.js`,
             wasmURL: `${e}/libs/ffmpeg/ffmpeg-core.wasm`
-          }), window.ffmpegInstance = n, window.ffmpegInitialized = !0, console.log("FFmpeg loaded successfully"), s();
-        } catch (r) {
-          a(r);
+          }), window.ffmpegInstance = r, window.ffmpegInitialized = !0, console.log("FFmpeg loaded successfully"), s();
+        } catch (n) {
+          a(n);
         }
       }, t.onerror = () => a(new Error("Failed to load FFmpeg script")), document.head.appendChild(t);
     });
@@ -973,8 +973,8 @@ async function L(i, e = {}) {
     framerate: t = 60,
     codec: s = "libx264",
     outputFile: a = "out.mp4",
-    onProgress: r,
-    outputFormat: n = "mp4"
+    onProgress: n,
+    outputFormat: r = "mp4"
   } = e, l = i.getDuration(), h = [], d = 1 / t;
   for (let c = 0; c <= l + d; c += d)
     h.push(c);
@@ -988,14 +988,14 @@ async function L(i, e = {}) {
         b(w);
       })
     ), u = `frame_${c.toString().padStart(6, "0")}.png`;
-    y.push(u), n === "mp4" ? window.ffmpegInstance.writeFile(u, new Uint8Array(await m.arrayBuffer())) : p.push(m), r && r((n === "mp4" ? 0.3 : 0.9) * (c * f));
+    y.push(u), r === "mp4" ? window.ffmpegInstance.writeFile(u, new Uint8Array(await m.arrayBuffer())) : p.push(m), n && n((r === "mp4" ? 0.3 : 0.9) * (c * f));
   }
-  if (r && r(n === "mp4" ? 0.3 : 0.9), n === "mp4") {
+  if (n && n(r === "mp4" ? 0.3 : 0.9), r === "mp4") {
     const c = window.ffmpegInstance;
     c.on("progress", ({ progress: P }) => {
-      if (r) {
+      if (n) {
         const E = 0.3 + P * 0.7;
-        r(E);
+        n(E);
       }
     }), c.on("log", (P) => {
       console.log(`ffmpeg log: ${JSON.stringify(P)}`);
@@ -1015,15 +1015,15 @@ async function L(i, e = {}) {
       "-crf",
       "18",
       a
-    ]), r && r(0.9);
+    ]), n && n(0.9);
     const m = await c.readFile(a), u = new Blob([m.buffer], { type: "video/mp4" }), b = URL.createObjectURL(u), w = document.createElement("a");
     w.href = b, w.download = a, document.body.appendChild(w), w.click(), document.body.removeChild(w), URL.revokeObjectURL(b);
-  } else if (n === "node_mp4") {
+  } else if (r === "node_mp4") {
     const c = `ws://${window.location.hostname}:${F}`;
     let m;
     try {
       m = new WebSocket(c), m.onopen = function() {
-        r && r(0.1), m.send(JSON.stringify({
+        n && n(0.1), m.send(JSON.stringify({
           type: "init",
           metadata: {
             framerate: t,
@@ -1035,12 +1035,12 @@ async function L(i, e = {}) {
         const b = JSON.parse(u.data);
         switch (b.type) {
           case "init":
-            r && r(0.15), await T(m, p);
+            n && n(0.15), await T(m, p);
             break;
           case "frame_received":
-            if (r) {
+            if (n) {
               const E = 0.15 + (b.index + 1) / p.length * 0.7;
-              r(E);
+              n(E);
             }
             b.index === p.length - 1 && m.send(JSON.stringify({
               type: "render",
@@ -1049,18 +1049,18 @@ async function L(i, e = {}) {
             }));
             break;
           case "render_started":
-            r && r(0.85);
+            n && n(0.85);
             break;
           case "progress":
-            if (r) {
+            if (n) {
               const E = 0.85 + b.frame / b.totalFrames * 0.13;
-              r(Math.min(E, 0.98));
+              n(Math.min(E, 0.98));
             }
             break;
           case "completed":
-            r && r(0.98);
+            n && n(0.98);
             const w = `http://${window.location.hostname}:${F}${b.downloadUrl}`, P = document.createElement("a");
-            P.href = w, P.download = a, document.body.appendChild(P), P.click(), document.body.removeChild(P), r && r(1), m.close();
+            P.href = w, P.download = a, document.body.appendChild(P), P.click(), document.body.removeChild(P), n && n(1), m.close();
             break;
           case "error":
             throw console.error("Server error:", b.message), new Error(`Server error: ${b.message}`);
@@ -1091,7 +1091,7 @@ async function L(i, e = {}) {
       c.send(b), u % 10 === 0 && await new Promise((w) => setTimeout(w, 10));
     }
   }
-  g && i.play(), r && r(1);
+  g && i.play(), n && n(1);
 }
 const J = `
 body {
@@ -1395,8 +1395,8 @@ class I {
     }, this.loop = this.options.loop || !1, this.isPlaying = !1, this.options.injectStyles && ee();
   }
   static async create(e, t, s = {}) {
-    const a = new I(s), r = document.createElement("canvas");
-    return e.append(r), a.setScene(t(r)), await a.initialize(e), a;
+    const a = new I(s), n = document.createElement("canvas");
+    return e.append(n), a.setScene(t(n)), await a.initialize(e), a;
   }
   /**
    * Set the scene to be controlled by this Mation instance
@@ -1424,26 +1424,27 @@ class I {
     this.scene && this.scene.queueRender();
   }
   async initialize(e) {
+    var t, s;
     if (!this.scene)
       throw Error("Can't initialize without a scene.");
     if (this.options.showUI && this.setupControls(e), (this.options.enableZoom || this.options.enablePan) && !this.options.showUI && this.setupZoomPanEvents(), this.scene) {
       await this.scene.runSequence();
-      const t = this.scene.getDuration(), s = this.scene.getCurrentTime();
-      this.scene.seekToTime(0), this.options.showUI && this.updateTimeDisplay(s, t), this.isPlaying = this.options.autoplay ?? !1, this.isPlaying ? this.scene.play() : this.scene.pause(), this.options.showUI && this.playPauseButton && (this.playPauseButton.textContent = this.isPlaying ? "⏸️" : "▶️");
+      const a = this.scene.getDuration(), n = this.scene.getCurrentTime();
+      (s = (t = window.mation) == null ? void 0 : t.options) != null && s.cacheState || this.scene.seekToTime(0), this.options.showUI && this.updateTimeDisplay(n, a), this.isPlaying = this.options.autoplay ?? !1, this.isPlaying ? this.scene.play() : this.scene.pause(), this.options.showUI && this.playPauseButton && (this.playPauseButton.textContent = this.isPlaying ? "⏸️" : "▶️");
     }
-    this.updateScrubber(), window.mation = this, window.render = async (t = "mp4") => {
+    this.updateScrubber(), window.mation = this, window.render = async (a = "mp4") => {
       this.scene ? await L(this.scene, {
-        outputFormat: t,
+        outputFormat: a,
         libraryConfig: this.options.libraryConfig
       }) : console.error("No scene available to render");
-    }, window.setTargetFPS = (t) => {
-      this.scene && (this.scene.setTargetFPS(t), console.log(`Target FPS set to ${t}`));
-    }, window.setLoop = (t) => {
-      this.loop = t, this.loopButton && (this.loopButton.style.opacity = t ? "1.0" : "0.5", this.loopButton.title = t ? "Loop On" : "Loop Off");
+    }, window.setTargetFPS = (a) => {
+      this.scene && (this.scene.setTargetFPS(a), console.log(`Target FPS set to ${a}`));
+    }, window.setLoop = (a) => {
+      this.loop = a, this.loopButton && (this.loopButton.style.opacity = a ? "1.0" : "0.5", this.loopButton.title = a ? "Loop On" : "Loop Off");
     }, window.resetZoomPan = () => {
       if (this.scene) {
-        const t = this.scene.canvas.width, s = this.scene.canvas.height;
-        this.scene.setMousePosition(t / 2, s / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
+        const a = this.scene.canvas.width, n = this.scene.canvas.height;
+        this.scene.setMousePosition(a / 2, n / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
       }
     };
   }
@@ -1465,11 +1466,11 @@ class I {
     s.className = "reset-zoom-button", s.textContent = "🔍", s.title = "Reset Zoom", e.appendChild(s);
     const a = document.createElement("div");
     a.className = "scrubber-container", t.appendChild(a);
-    const r = document.createElement("div");
-    if (r.className = "right-controls-wrapper", a.appendChild(r), this.timeDisplay = document.createElement("div"), this.timeDisplay.className = "time-display", this.timeDisplay.textContent = "0.00 / 0.00", r.appendChild(this.timeDisplay), this.loopButton = document.createElement("button"), this.loopButton.className = "loop-button", this.loopButton.textContent = "🔁", this.loopButton.title = this.loop ? "Loop On" : "Loop Off", this.loopButton.style.opacity = this.loop ? "1.0" : "0.5", r.appendChild(this.loopButton), this.scrubber = document.createElement("input"), this.scrubber.type = "range", this.scrubber.min = "0", this.scrubber.max = "1000", this.scrubber.value = "0", this.scrubber.className = "scrubber", a.appendChild(this.scrubber), this.options.enableZoom || this.options.enablePan ? s.style.display = "flex" : s.style.display = "none", this.options.enableRendering) {
+    const n = document.createElement("div");
+    if (n.className = "right-controls-wrapper", a.appendChild(n), this.timeDisplay = document.createElement("div"), this.timeDisplay.className = "time-display", this.timeDisplay.textContent = "0.00 / 0.00", n.appendChild(this.timeDisplay), this.loopButton = document.createElement("button"), this.loopButton.className = "loop-button", this.loopButton.textContent = "🔁", this.loopButton.title = this.loop ? "Loop On" : "Loop Off", this.loopButton.style.opacity = this.loop ? "1.0" : "0.5", n.appendChild(this.loopButton), this.scrubber = document.createElement("input"), this.scrubber.type = "range", this.scrubber.min = "0", this.scrubber.max = "1000", this.scrubber.value = "0", this.scrubber.className = "scrubber", a.appendChild(this.scrubber), this.options.enableZoom || this.options.enablePan ? s.style.display = "flex" : s.style.display = "none", this.options.enableRendering) {
       this.renderDropdown = document.createElement("div"), this.renderDropdown.className = "render-dropdown", e.appendChild(this.renderDropdown);
-      const n = document.createElement("div");
-      n.className = "button-container", this.renderDropdown.appendChild(n), this.renderButton = document.createElement("button"), this.renderButton.className = "render-button", this.renderButton.textContent = "Render MP4", n.appendChild(this.renderButton), this.dropdownToggle = document.createElement("button"), this.dropdownToggle.className = "dropdown-toggle", this.dropdownToggle.innerHTML = "▼", n.appendChild(this.dropdownToggle), this.renderOptions = document.createElement("div"), this.renderOptions.className = "render-options", this.renderDropdown.appendChild(this.renderOptions);
+      const r = document.createElement("div");
+      r.className = "button-container", this.renderDropdown.appendChild(r), this.renderButton = document.createElement("button"), this.renderButton.className = "render-button", this.renderButton.textContent = "Render MP4", r.appendChild(this.renderButton), this.dropdownToggle = document.createElement("button"), this.dropdownToggle.className = "dropdown-toggle", this.dropdownToggle.innerHTML = "▼", r.appendChild(this.dropdownToggle), this.renderOptions = document.createElement("div"), this.renderOptions.className = "render-options", this.renderDropdown.appendChild(this.renderOptions);
       const l = K(), h = document.createElement("div");
       h.className = "render-option selected", h.textContent = "MP4 Video", h.dataset.format = "mp4", this.renderOptions.appendChild(h);
       const d = document.createElement("div");
@@ -1516,14 +1517,14 @@ class I {
       var c;
       t && (t = !1, (c = this.scene) == null || c.setPerformingPreviewAction(!1));
     });
-    let r = 0, n = 1, l = 0, h = 0;
+    let n = 0, r = 1, l = 0, h = 0;
     (y = this.scene.canvas) == null || y.addEventListener("touchstart", (c) => {
       if (this.scene && c.touches.length === 2) {
         const m = c.touches[0], u = c.touches[1];
-        r = Math.hypot(
+        n = Math.hypot(
           u.clientX - m.clientX,
           u.clientY - m.clientY
-        ), n = this.scene.zoom, l = (m.clientX + u.clientX) / 2, h = (m.clientY + u.clientY) / 2;
+        ), r = this.scene.zoom, l = (m.clientX + u.clientX) / 2, h = (m.clientY + u.clientY) / 2;
       }
     }), (T = this.scene.canvas) == null || T.addEventListener("touchmove", (c) => {
       if (this.scene && c.touches.length === 2) {
@@ -1536,8 +1537,8 @@ class I {
           const x = Math.hypot(
             u.clientX - m.clientX,
             u.clientY - m.clientY
-          ) / r;
-          this.scene.setZoom(n * x);
+          ) / n;
+          this.scene.setZoom(r * x);
         }
         if (w) {
           const C = P - l, x = E - h, [O, U] = this.scene.pan;
@@ -1547,7 +1548,7 @@ class I {
     }, { passive: !1 });
   }
   setupEventListeners() {
-    var t, s, a, r, n, l, h, d;
+    var t, s, a, n, r, l, h, d;
     this.setupPanZoomEventListeners(), this.options.enableShortcuts && this.setupKeyboardShortcuts(), (t = this.playPauseButton) == null || t.addEventListener("click", () => {
       this.scene && (this.isPlaying ? (this.scene.pause(), this.playPauseButton && (this.playPauseButton.textContent = "▶️")) : (this.scene.getCurrentTime() >= this.scene.getDuration() && this.scene.seekToTime(0), this.scene.play(), this.playPauseButton && (this.playPauseButton.textContent = "⏸️")), this.isPlaying = !this.isPlaying);
     }), (s = this.loopButton) == null || s.addEventListener("click", () => {
@@ -1561,13 +1562,13 @@ class I {
       this.scene.setMousePosition(g / 2, f / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
     }), (a = this.scrubber) == null || a.addEventListener("mousedown", () => {
       this.scene && (this.isDragging = !0, this.wasPlayingBeforeDrag = this.isPlaying, this.scene.pause(), this.scene.setPerformingPreviewAction(!0));
-    }), (r = this.scrubber) == null || r.addEventListener("touchstart", () => {
+    }), (n = this.scrubber) == null || n.addEventListener("touchstart", () => {
       this.scene && (this.isDragging = !0, this.wasPlayingBeforeDrag = this.isPlaying, this.scene.pause(), this.scene.setPerformingPreviewAction(!0));
     }), document.addEventListener("mouseup", () => {
       this.scene && this.isDragging && (this.isDragging = !1, this.scene.setPerformingPreviewAction(!1), this.wasPlayingBeforeDrag && (this.scene.play(), this.isPlaying = !0, this.playPauseButton && (this.playPauseButton.textContent = "⏸️")));
     }), document.addEventListener("touchend", () => {
       this.scene && this.isDragging && (this.isDragging = !1, this.scene.setPerformingPreviewAction(!1), this.wasPlayingBeforeDrag && (this.scene.play(), this.isPlaying = !0, this.playPauseButton && (this.playPauseButton.textContent = "⏸️")));
-    }), (n = this.scrubber) == null || n.addEventListener("input", () => {
+    }), (r = this.scrubber) == null || r.addEventListener("input", () => {
       if (!this.scene || !this.scrubber)
         return;
       const g = parseInt(this.scrubber.value, 10), f = this.scene.getDuration(), p = g / 1e3 * f;
@@ -1614,17 +1615,17 @@ class I {
       if (!this.scene || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
         return;
       if (e.key === "Escape") {
-        const r = this.scene.canvas.width, n = this.scene.canvas.height;
-        this.scene.setMousePosition(r / 2, n / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
+        const n = this.scene.canvas.width, r = this.scene.canvas.height;
+        this.scene.setMousePosition(n / 2, r / 2), this.scene.setZoom(1), this.scene.setPan([0, 0]), this.scene.setPerformingPreviewAction(!1);
       }
       e.key === " " && (e.preventDefault(), this.isPlaying ? (this.scene.pause(), this.playPauseButton && (this.playPauseButton.textContent = "▶️")) : (this.scene.getCurrentTime() >= this.scene.getDuration() && this.scene.seekToTime(0), this.scene.play(), this.playPauseButton && (this.playPauseButton.textContent = "⏸️")), this.isPlaying = !this.isPlaying);
       const s = 1 / this.scene.getTargetFPS(), a = s * 60;
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault(), this.isPlaying && (this.scene.pause(), this.isPlaying = !1, this.playPauseButton && (this.playPauseButton.textContent = "▶️"));
-        const n = this.scene.getCurrentTime(), l = this.scene.getDuration();
+        const r = this.scene.getCurrentTime(), l = this.scene.getDuration();
         let h;
         const d = e.shiftKey ? a : s;
-        if (e.key === "ArrowLeft" ? h = Math.max(0, n - d) : h = Math.min(l, n + d), this.scene.seekToTime(h), this.updateTimeDisplay(h, l), this.scrubber) {
+        if (e.key === "ArrowLeft" ? h = Math.max(0, r - d) : h = Math.min(l, r + d), this.scene.seekToTime(h), this.updateTimeDisplay(h, l), this.scrubber) {
           const g = Math.min(Math.floor(h / l * 1e3), 1e3);
           this.scrubber.value = g.toString();
         }

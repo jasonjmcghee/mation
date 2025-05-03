@@ -157,7 +157,10 @@ export default class Mation {
       // Initialize duration once animation is loaded
       const duration = this.scene.getDuration();
       const currentTime = this.scene.getCurrentTime();
-      this.scene.seekToTime(0);
+
+      if (!(window as any).mation?.options?.cacheState) {
+        this.scene.seekToTime(0);
+      }
       
       // Update time display with the current position if UI is shown
       if (this.options.showUI) {
