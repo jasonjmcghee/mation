@@ -186,7 +186,7 @@ void main() {
           oneOverSize: [1.0 / this.width, 1.0 / this.height],
           sceneTexture: null,
           distanceTexture: null,
-          rayCount: 64,
+          rayCount: 32,
           maxSteps: 80,
           sunAngle: 0.4,
           enableSun: false,
@@ -693,7 +693,7 @@ void main() {
     app.append(canvas);
 
     // Create Mation instance
-    const mation = new Mation({ autoplay: true, loop: true });
+    const mation = new Mation({ autoplay: true, loop: true, showUI: true });
 
     const scene = new MyScene({canvas, width, height});
 
