@@ -2,6 +2,10 @@
 
 A powerful JavaScript animation and scene rendering library for creating animations with Canvas and WebGL.
 
+Checkout this example:
+- [Demo](https://jasonjmcghee.github.io/mation/)
+- [Code](./public/index.html)
+
 ## Features
 
 - Create rich animated scenes using a simple interface
