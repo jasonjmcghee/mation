@@ -11,6 +11,20 @@ export interface MationOptions {
   enableRendering?: boolean;
   /** Whether to inject styles automatically */
   injectStyles?: boolean;
+  /** Whether to loop the animation automatically when it ends */
+  loop?: boolean;
+  /** Whether to show the UI controls */
+  showUI?: boolean;
+  /** Whether to cache animation state in localStorage */
+  cacheState?: boolean;
+  /** Whether to autoplay the animation on load */
+  autoplay?: boolean;
+  /** Whether to enable zooming with mouse wheel and touch gestures */
+  enableZoom?: boolean;
+  /** Whether to enable panning with Alt+drag and touch gestures */
+  enablePan?: boolean;
+  /** Whether to enable keyboard shortcuts: Escape to reset zoom, Space to toggle play/pause, arrow keys to scrub frames */
+  enableShortcuts?: boolean;
   /** 
    * Configuration for external libraries.
    * By default, libraries are automatically loaded from the same location as the Mation script.
@@ -37,18 +51,33 @@ export default class Mation {
   private selectedFormat: OutputFormat = 'mp4';
   private progressContainer: HTMLElement | null = null;
   private progressBar: HTMLElement | null = null;
+  private loopButton: HTMLButtonElement | null = null;
   private isPlaying = true;
   private isDragging = false;
   private wasPlayingBeforeDrag = false;
   private isRendering = false;
+  private loop = false;
   private options: MationOptions;
 
   constructor(options: MationOptions = {}) {
     this.options = {
-      enableRendering: true,
+      enableRendering: false,
       injectStyles: true,
+      loop: false,
+      showUI: false,
+      cacheState: false,
+      autoplay: false,
+      enableZoom: true,
+      enablePan: true,
+      enableShortcuts: true,
       ...options
     };
+    
+    // Set loop property from options
+    this.loop = this.options.loop || false;
+    
+    // Set initial playing state based on autoplay
+    this.isPlaying = this.options.autoplay || false;
     
     // Inject styles if requested
     if (this.options.injectStyles) {
@@ -98,8 +127,15 @@ export default class Mation {
       throw Error("Can't initialize without a scene.");
     }
 
-    // Set up the UI controls
-    this.setupControls(container);
+    // Set up the UI controls if showUI is enabled
+    if (this.options.showUI) {
+      this.setupControls(container);
+    }
+    
+    // Always set up zoom and pan events even if UI is hidden
+    if ((this.options.enableZoom || this.options.enablePan) && !this.options.showUI) {
+      this.setupZoomPanEvents();
+    }
     
     // Run the animation sequence to build the timeline
     if (this.scene) {
@@ -109,12 +145,20 @@ export default class Mation {
       const duration = this.scene.getDuration();
       const currentTime = this.scene.getCurrentTime();
       
-      // Update time display with the current position
-      this.updateTimeDisplay(currentTime, duration);
+      // Update time display with the current position if UI is shown
+      if (this.options.showUI) {
+        this.updateTimeDisplay(currentTime, duration);
+      }
       
-      // Make sure isPlaying state is reflected in the button
-      this.isPlaying = this.scene.playing();
-      if (this.playPauseButton) {
+      // Set scene's playing state based on our isPlaying property (initialized from autoplay option)
+      if (this.isPlaying) {
+        this.scene.play();
+      } else {
+        this.scene.pause();
+      }
+      
+      // Update UI to reflect playing state if UI is shown
+      if (this.options.showUI && this.playPauseButton) {
         this.playPauseButton.textContent = this.isPlaying ? '⏸️' : '▶️';
       }
     }
@@ -138,6 +182,30 @@ export default class Mation {
       if (this.scene) {
         this.scene.setTargetFPS(fps);
         console.log(`Target FPS set to ${fps}`);
+      }
+    };
+    (window as any).setLoop = (shouldLoop: boolean) => {
+      this.loop = shouldLoop;
+      if (this.loopButton) {
+        this.loopButton.style.opacity = shouldLoop ? '1.0' : '0.5';
+        this.loopButton.title = shouldLoop ? 'Loop On' : 'Loop Off';
+      }
+    };
+    // Add helper methods to reset zoom/pan programmatically even when UI is hidden
+    (window as any).resetZoomPan = () => {
+      if (this.scene) {
+        // Reset to center of canvas
+        const canvasWidth = this.scene.canvas.width;
+        const canvasHeight = this.scene.canvas.height;
+        this.scene.setMousePosition(canvasWidth / 2, canvasHeight / 2);
+        
+        // Reset zoom to 1.0
+        this.scene.setZoom(1.0);
+        
+        // Reset pan to [0, 0]
+        this.scene.setPan([0, 0]);
+
+        this.scene.setPerformingPreviewAction(false);
       }
     };
   }
@@ -165,6 +233,18 @@ export default class Mation {
     }
   }
 
+  // Set up just the zoom and pan events without UI
+  private setupZoomPanEvents() {
+    if (!this.scene) return;
+    
+    this.setupPanZoomEventListeners();
+    
+    // Set up keyboard shortcuts if enabled
+    if (this.options.enableShortcuts) {
+      this.setupKeyboardShortcuts();
+    }
+  }
+  
   private setupControls(container: Element) {
     // Create animation controls
     const controlsContainer = document.createElement('div');
@@ -184,16 +264,32 @@ export default class Mation {
     resetZoomButton.title = 'Reset Zoom';
     container.appendChild(resetZoomButton);
     
+    // Move time display to scrubber container (will be created later)
+    // Loop button will be added after scrubber container
+    
     // Scrubber/slider container
     const scrubberContainer = document.createElement('div');
     scrubberContainer.className = 'scrubber-container';
     controlsContainer.appendChild(scrubberContainer);
     
+    // Create controls wrapper for the right side (time display and loop button)
+    const rightControlsWrapper = document.createElement('div');
+    rightControlsWrapper.className = 'right-controls-wrapper';
+    scrubberContainer.appendChild(rightControlsWrapper);
+    
     // Time display
     this.timeDisplay = document.createElement('div');
     this.timeDisplay.className = 'time-display';
     this.timeDisplay.textContent = '0.00 / 0.00';
-    scrubberContainer.appendChild(this.timeDisplay);
+    rightControlsWrapper.appendChild(this.timeDisplay);
+    
+    // Loop button
+    this.loopButton = document.createElement('button');
+    this.loopButton.className = 'loop-button';
+    this.loopButton.textContent = '🔁';
+    this.loopButton.title = this.loop ? 'Loop On' : 'Loop Off';
+    this.loopButton.style.opacity = this.loop ? '1.0' : '0.5';
+    rightControlsWrapper.appendChild(this.loopButton);
     
     // Scrubber input
     this.scrubber = document.createElement('input');
@@ -203,6 +299,13 @@ export default class Mation {
     this.scrubber.value = '0';
     this.scrubber.className = 'scrubber';
     scrubberContainer.appendChild(this.scrubber);
+    
+    // Only show reset zoom button if zoom or pan is enabled
+    if (this.options.enableZoom || this.options.enablePan) {
+      resetZoomButton.style.display = 'flex';
+    } else {
+      resetZoomButton.style.display = 'none';
+    }
     
     // Only add rendering controls if enabled
     if (this.options.enableRendering) {
@@ -273,7 +376,203 @@ export default class Mation {
     this.setupEventListeners();
   }
 
+  private setupPanZoomEventListeners() {
+    if (!this.scene) return;
+    
+    // Track mouse position for zooming
+    this.scene.canvas?.addEventListener('mousemove', (event) => {
+      if (!this.scene || !this.scene.canvas) return;
+      
+      // Get mouse position relative to canvas
+      const rect = this.scene.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      // Update the mouse position in the scene
+      this.scene.setMousePosition(x, y);
+    });
+
+    // Zoom with mouse wheel
+    let wheelTimeout: number | null = null;
+    
+    this.scene.canvas?.addEventListener('wheel', (event) => {
+      if (!this.scene || !this.options.enableZoom) return;
+
+      // Prevent default behavior to avoid page scrolling
+      event.preventDefault();
+
+      // Get mouse position relative to canvas
+      const rect = this.scene.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      // First, update the mouse position
+      this.scene.setMousePosition(x, y);
+
+      // Get current zoom
+      const currentZoom = this.scene.zoom;
+
+      // Calculate new zoom based on wheel direction
+      let newZoom;
+      if (event.deltaY > 0) {
+        // Zoom out - use smaller steps for smoother experience
+        newZoom = Math.max(0.05, currentZoom / 1.1);
+      } else {
+        // Zoom in - use smaller steps for smoother experience
+        newZoom = Math.min(10, currentZoom * 1.1);
+      }
+
+      // Apply the new zoom - this will use queueRender internally
+      this.scene.setZoom(newZoom);
+
+      // Enable force default layer only while zooming
+      this.scene.setPerformingPreviewAction(true);
+      
+      // Clear any existing timeout
+      if (wheelTimeout !== null) {
+        clearTimeout(wheelTimeout);
+      }
+      
+      // Set a new timeout to detect when zooming stops
+      wheelTimeout = window.setTimeout(() => {
+        // Set force default layer to false when zooming stops
+        if (this.scene) {
+          this.scene.setPerformingPreviewAction(false);
+        }
+        wheelTimeout = null;
+      }, 200); // 200ms debounce time
+    }, { passive: false });
+    
+    // Pan with Alt + mouse drag
+    let isPanning = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    this.scene.canvas?.addEventListener('mousedown', (event) => {
+      if (!this.scene || !this.options.enablePan) return;
+
+      // Only start panning if Alt key is pressed
+      if (event.altKey) {
+        this.scene.setPerformingPreviewAction(true);
+        isPanning = true;
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
+    });
+
+    this.scene.canvas?.addEventListener('mousemove', (event) => {
+      if (!this.scene || !isPanning || !this.options.enablePan) return;
+      
+      const deltaX = event.clientX - lastX;
+      const deltaY = event.clientY - lastY;
+      
+      // Update pan values - this will use queueRender internally
+      const [currentX, currentY] = this.scene.pan;
+      this.scene.setPan([currentX + deltaX, currentY + deltaY]);
+
+      lastX = event.clientX;
+      lastY = event.clientY;
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (isPanning) {
+        isPanning = false;
+        this.scene?.setPerformingPreviewAction(false);
+      }
+    });
+    
+    // Touch-based panning with two fingers
+    let touchStartDistance = 0;
+    let initialZoom = 1;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    this.scene.canvas?.addEventListener('touchstart', (event) => {
+      if (!this.scene) return;
+      
+      if (event.touches.length === 2) {
+        // Two-finger gesture started - handle zoom and pan
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        
+        // Calculate distance between touches for zoom
+        touchStartDistance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        
+        initialZoom = this.scene.zoom;
+        
+        // Calculate midpoint for pan
+        touchStartX = (touch1.clientX + touch2.clientX) / 2;
+        touchStartY = (touch1.clientY + touch2.clientY) / 2;
+      }
+    });
+    
+    this.scene.canvas?.addEventListener('touchmove', (event) => {
+      if (!this.scene) return;
+      
+      if (event.touches.length === 2) {
+        // Prevent default to avoid page gestures
+        event.preventDefault();
+        
+        const touch1 = event.touches[0];
+        const touch2 = event.touches[1];
+        
+        const canDoZoom = this.options.enableZoom;
+        const canDoPan = this.options.enablePan;
+        
+        if (!canDoZoom && !canDoPan) return;
+        
+        // Calculate midpoint for zoom center
+        const currentMidX = (touch1.clientX + touch2.clientX) / 2;
+        const currentMidY = (touch1.clientY + touch2.clientY) / 2;
+        
+        // Get canvas position
+        const rect = this.scene.canvas.getBoundingClientRect();
+        const canvasX = currentMidX - rect.left;
+        const canvasY = currentMidY - rect.top;
+        
+        // Update mouse position for zoom centering
+        this.scene.setMousePosition(canvasX, canvasY);
+        
+        if (canDoZoom) {
+          // Handle zoom - calculate new distance
+          const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+          );
+          
+          // Calculate zoom ratio
+          const zoomDelta = currentDistance / touchStartDistance;
+          this.scene.setZoom(initialZoom * zoomDelta);
+        }
+        
+        if (canDoPan) {
+          // Handle pan - calculate midpoint movement
+          const deltaX = currentMidX - touchStartX;
+          const deltaY = currentMidY - touchStartY;
+          
+          const [startX, startY] = this.scene.pan;
+          this.scene.setPan([startX + deltaX, startY + deltaY]);
+          
+          // Update start position for next move
+          touchStartX = currentMidX;
+          touchStartY = currentMidY;
+        }
+      }
+    }, { passive: false });
+  }
+  
   private setupEventListeners() {
+    // Set up pan and zoom events
+    this.setupPanZoomEventListeners();
+    
+    // Set up keyboard shortcuts if enabled
+    if (this.options.enableShortcuts) {
+      this.setupKeyboardShortcuts();
+    }
+    
     // Play/Pause button handler
     this.playPauseButton?.addEventListener('click', () => {
       if (!this.scene) return;
@@ -294,7 +593,19 @@ export default class Mation {
       this.isPlaying = !this.isPlaying;
     });
     
-    // Reset zoom button handler
+    // Loop button handler
+    this.loopButton?.addEventListener('click', () => {
+      // Toggle loop state
+      this.loop = !this.loop;
+      
+      // Update button appearance
+      if (this.loopButton) {
+        this.loopButton.style.opacity = this.loop ? '1.0' : '0.5';
+        this.loopButton.title = this.loop ? 'Loop On' : 'Loop Off';
+      }
+    });
+    
+    // Reset zoom button handler - only if UI is shown, but affects zoom/pan regardless of enableZoom/enablePan
     const resetZoomButton = document.querySelector('.reset-zoom-button');
     resetZoomButton?.addEventListener('click', () => {
       if (!this.scene) return;
@@ -375,179 +686,6 @@ export default class Mation {
       this.scene.seekToTime(targetTime);
       this.updateTimeDisplay(targetTime, duration);
     });
-    
-    // Track mouse position for zooming
-    this.scene?.canvas?.addEventListener('mousemove', (event) => {
-      if (!this.scene || !this.scene.canvas) return;
-      
-      // Get mouse position relative to canvas
-      const rect = this.scene.canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      // Update the mouse position in the scene
-      this.scene.setMousePosition(x, y);
-    });
-
-    // Zoom with mouse wheel
-    let wheelTimeout: number | null = null;
-    
-    this.scene?.canvas?.addEventListener('wheel', (event) => {
-      if (!this.scene) return;
-
-      // Prevent default behavior to avoid page scrolling
-      event.preventDefault();
-
-      // Get mouse position relative to canvas
-      const rect = this.scene.canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-
-      // First, update the mouse position
-      this.scene.setMousePosition(x, y);
-
-      // Get current zoom
-      const currentZoom = this.scene.zoom;
-
-      // Calculate new zoom based on wheel direction
-      let newZoom;
-      if (event.deltaY > 0) {
-        // Zoom out - use smaller steps for smoother experience
-        newZoom = Math.max(0.05, currentZoom / 1.1);
-      } else {
-        // Zoom in - use smaller steps for smoother experience
-        newZoom = Math.min(10, currentZoom * 1.1);
-      }
-
-      // Apply the new zoom - this will use queueRender internally
-      this.scene.setZoom(newZoom);
-
-      // Enable force default layer only while zooming
-      this.scene.setPerformingPreviewAction(true);
-      
-      // Clear any existing timeout
-      if (wheelTimeout !== null) {
-        clearTimeout(wheelTimeout);
-      }
-      
-      // Set a new timeout to detect when zooming stops
-      wheelTimeout = window.setTimeout(() => {
-        // Set force default layer to false when zooming stops
-        if (this.scene) {
-          this.scene.setPerformingPreviewAction(false);
-        }
-        wheelTimeout = null;
-      }, 200); // 200ms debounce time
-    }, { passive: false });
-    
-    // Pan with Alt + mouse drag
-    let isPanning = false;
-    let lastX = 0;
-    let lastY = 0;
-
-    this.scene?.canvas?.addEventListener('mousedown', (event) => {
-      if (!this.scene) return;
-
-      // Only start panning if Alt key is pressed
-      if (event.altKey) {
-        this.scene.setPerformingPreviewAction(true);
-        isPanning = true;
-        lastX = event.clientX;
-        lastY = event.clientY;
-      }
-    });
-
-    this.scene?.canvas?.addEventListener('mousemove', (event) => {
-      if (!this.scene || !isPanning) return;
-      
-      const deltaX = event.clientX - lastX;
-      const deltaY = event.clientY - lastY;
-      
-      // Update pan values - this will use queueRender internally
-      const [currentX, currentY] = this.scene.pan;
-      this.scene.setPan([currentX + deltaX, currentY + deltaY]);
-
-      lastX = event.clientX;
-      lastY = event.clientY;
-    });
-    
-    this.scene?.canvas?.addEventListener('mouseup', () => {
-      isPanning = false;
-      this.scene?.setPerformingPreviewAction(false);
-    });
-    
-    // Touch-based panning with two fingers
-    let touchStartDistance = 0;
-    let initialZoom = 1;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    
-    this.scene?.canvas?.addEventListener('touchstart', (event) => {
-      if (!this.scene) return;
-      
-      if (event.touches.length === 2) {
-        // Two-finger gesture started - handle zoom and pan
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        
-        // Calculate distance between touches for zoom
-        touchStartDistance = Math.hypot(
-          touch2.clientX - touch1.clientX,
-          touch2.clientY - touch1.clientY
-        );
-        
-        initialZoom = this.scene.zoom;
-        
-        // Calculate midpoint for pan
-        touchStartX = (touch1.clientX + touch2.clientX) / 2;
-        touchStartY = (touch1.clientY + touch2.clientY) / 2;
-      }
-    });
-    
-    this.scene?.canvas?.addEventListener('touchmove', (event) => {
-      if (!this.scene) return;
-      
-      if (event.touches.length === 2) {
-        // Prevent default to avoid page gestures
-        event.preventDefault();
-        
-        const touch1 = event.touches[0];
-        const touch2 = event.touches[1];
-        
-        // Handle zoom - calculate new distance
-        const currentDistance = Math.hypot(
-          touch2.clientX - touch1.clientX,
-          touch2.clientY - touch1.clientY
-        );
-        
-        // Calculate midpoint for zoom center
-        const currentMidX = (touch1.clientX + touch2.clientX) / 2;
-        const currentMidY = (touch1.clientY + touch2.clientY) / 2;
-        
-        // Get canvas position
-        const rect = this.scene.canvas.getBoundingClientRect();
-        const canvasX = currentMidX - rect.left;
-        const canvasY = currentMidY - rect.top;
-        
-        // Update mouse position for zoom centering
-        this.scene.setMousePosition(canvasX, canvasY);
-        
-        // Calculate zoom ratio
-        const zoomDelta = currentDistance / touchStartDistance;
-        this.scene.setZoom(initialZoom * zoomDelta);
-        
-        // Handle pan - calculate midpoint movement
-        const deltaX = currentMidX - touchStartX;
-        const deltaY = currentMidY - touchStartY;
-        
-        const [startX, startY] = this.scene.pan;
-        this.scene.setPan([startX + deltaX, startY + deltaY]);
-        
-        // Update start position for next move
-        touchStartX = currentMidX;
-        touchStartY = currentMidY;
-      }
-    }, { passive: false });
 
     // Only set up rendering-related event listeners if rendering is enabled
     if (this.options.enableRendering) {
@@ -659,6 +797,94 @@ export default class Mation {
         this.isRendering = false;
       });
     }
+  }
+  
+  private setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (event) => {
+      if (!this.scene) return;
+      
+      // Ignore keyboard events in input fields
+      if (event.target instanceof HTMLInputElement || 
+          event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      // Escape key - reset zoom and pan
+      if (event.key === 'Escape') {
+        // Reset to center of canvas
+        const canvasWidth = this.scene.canvas.width;
+        const canvasHeight = this.scene.canvas.height;
+        this.scene.setMousePosition(canvasWidth / 2, canvasHeight / 2);
+        
+        // Reset zoom to 1.0
+        this.scene.setZoom(1.0);
+        
+        // Reset pan to [0, 0]
+        this.scene.setPan([0, 0]);
+        
+        this.scene.setPerformingPreviewAction(false);
+      }
+      
+      // Space key - toggle play/pause
+      if (event.key === ' ') {
+        event.preventDefault(); // Prevent scrolling
+        
+        if (this.isPlaying) {
+          // Pause the animation
+          this.scene.pause();
+          if (this.playPauseButton) this.playPauseButton.textContent = '▶️';
+        } else {
+          // If we're at the end of the animation, restart from beginning
+          if (this.scene.getCurrentTime() >= this.scene.getDuration()) {
+            this.scene.seekToTime(0);
+          }
+          // Play the animation
+          this.scene.play();
+          if (this.playPauseButton) this.playPauseButton.textContent = '⏸️';
+        }
+        this.isPlaying = !this.isPlaying;
+      }
+      
+      // Arrow keys - scrub one frame at a time or 60 frames with shift
+      const fps = this.scene.getTargetFPS();
+      const frameStep = 1 / fps;
+      const bigStep = frameStep * 60; // 60 frames
+      
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault(); // Prevent scrolling
+        
+        // Pause if playing
+        const wasPlaying = this.isPlaying;
+        if (wasPlaying) {
+          this.scene.pause();
+          this.isPlaying = false;
+          if (this.playPauseButton) this.playPauseButton.textContent = '▶️';
+        }
+        
+        const currentTime = this.scene.getCurrentTime();
+        const duration = this.scene.getDuration();
+        let newTime;
+        
+        // Determine step size (normal or with shift)
+        const step = event.shiftKey ? bigStep : frameStep;
+        
+        if (event.key === 'ArrowLeft') {
+          newTime = Math.max(0, currentTime - step);
+        } else {
+          newTime = Math.min(duration, currentTime + step);
+        }
+        
+        // Seek to the new time
+        this.scene.seekToTime(newTime);
+        this.updateTimeDisplay(newTime, duration);
+        
+        // Update scrubber if it exists
+        if (this.scrubber) {
+          const value = Math.min(Math.floor((newTime / duration) * 1000), 1000);
+          this.scrubber.value = value.toString();
+        }
+      }
+    });
   }
 
   private updateTimeDisplay(currentTime: number, totalDuration: number) {

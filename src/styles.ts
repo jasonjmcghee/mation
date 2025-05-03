@@ -74,11 +74,37 @@ body {
   flex-direction: column;
 }
 
+.right-controls-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
 .time-display {
   color: white;
   font-size: 12px;
-  margin-bottom: 5px;
   font-family: monospace;
+  margin-right: 10px;
+}
+
+.loop-button {
+  background: #333;
+  border: none;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.loop-button:hover {
+  background: #444;
 }
 
 .scrubber {

@@ -693,7 +693,7 @@ void main() {
     app.append(canvas);
 
     // Create Mation instance
-    const mation = new Mation();
+    const mation = new Mation({ autoplay: true, loop: true });
 
     const scene = new MyScene({canvas, width, height});
 

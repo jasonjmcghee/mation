@@ -23,6 +23,7 @@ export interface IScene {
   pause(): void;
   playing(): boolean;
   seekToTime(time: number): void;
+  loop(): boolean;
   
   // State getters
   getCurrentTime(): number;
@@ -39,6 +40,7 @@ export interface IScene {
   setPerformingPreviewAction(value: boolean): void;
 
   setTargetFPS(fps: number): void;
+  getTargetFPS(): number;
 
   runSequence(): Promise<void>;
   get zoom(): number
@@ -412,6 +414,11 @@ export class Scene implements IScene {
   
   // Player state persistence methods
   private savePlayerState(): void {
+    // Check if state caching is enabled via Mation options
+    if (!(window as any).mation?.options?.cacheState) {
+      return; // Skip saving state if caching is disabled
+    }
+    
     const state = {
       currentTime: this.currentTime,
       isPlaying: this.isPlaying,
@@ -427,6 +434,11 @@ export class Scene implements IScene {
   }
   
   private restorePlayerState(): void {
+    // Check if state caching is enabled via Mation options
+    if (!(window as any).mation?.options?.cacheState) {
+      return; // Skip restoring state if caching is disabled
+    }
+    
     try {
       const savedState = localStorage.getItem(Scene.PLAYER_STATE_KEY);
       if (savedState) {
@@ -437,7 +449,8 @@ export class Scene implements IScene {
         // is fully loaded to validate these values against the new timeline
         
         // Explicitly set isPlaying state - important to match UI state
-        if (state.isPlaying !== undefined) {
+        // Only restore if autoplay isn't explicitly set
+        if (state.isPlaying !== undefined && !(window as any).mation?.options?.autoplay) {
           this.isPlaying = state.isPlaying;
           console.log(`Restored playing state: ${this.isPlaying}`);
         }
@@ -468,6 +481,11 @@ export class Scene implements IScene {
   }
   
   private clearPlayerState(): void {
+    // Check if state caching is enabled via Mation options
+    if (!(window as any).mation?.options?.cacheState) {
+      return; // Skip clearing state if caching is disabled
+    }
+    
     try {
       localStorage.removeItem(Scene.PLAYER_STATE_KEY);
     } catch (e) {
@@ -599,6 +617,10 @@ export class Scene implements IScene {
     return this.isPlaying;
   }
   
+  loop(): boolean {
+    return (window as any).mation?.loop || false;
+  }
+  
   togglePlayPause(): void {
     if (this.isPlaying) {
       this.pause();
@@ -631,6 +653,11 @@ export class Scene implements IScene {
   setTargetFPS(fps: number): void {
     this.targetFPS = Math.max(1, fps);
     this.frameInterval = (1000 / this.targetFPS) / 1000;
+  }
+  
+  // Get the current target FPS
+  getTargetFPS(): number {
+    return this.targetFPS;
   }
 
   // Start the main animation loop
@@ -677,15 +704,22 @@ export class Scene implements IScene {
         
         // Check if we reached the end of animation
         if (this.currentTime >= this.totalDuration) {
-          // We reached the end, stop the animation
-          this.isPlaying = false;
-          
-          // Ensure we render the final frame
-          if (prevTime < this.totalDuration) {
-            this.renderAtTime(this.totalDuration);
+          // If looping is enabled from Mation, restart from beginning
+          if ((window as any).mation?.loop) {
+            this.currentTime = 0;
+            // Keep playing
+            this.isPlaying = true;
+          } else {
+            // Not looping, stop the animation
+            this.isPlaying = false;
+            
+            // Ensure we render the final frame
+            if (prevTime < this.totalDuration) {
+              this.renderAtTime(this.totalDuration);
+            }
           }
           
-          // Save player state after stopping
+          // Save player state after stopping or looping
           this.savePlayerState();
         }
       } else if (this.renderQueued) {
