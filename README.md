@@ -1,26 +1,16 @@
 # Mation
 
-A powerful JavaScript animation and scene rendering library for creating animations with Canvas and WebGL.
+An animation and scene rendering library for creating animations with Canvas and WebGL with a focus on supporting multipass shaders.
 
 Checkout this example:
-- [Demo](https://jasonjmcghee.github.io/mation/)
-- [Code](./public/index.html)
+- [Demo](https://jasonjmcghee.github.io/mation/examples/simple-gi.html)
+- [Code](./docs/examples/simple-gi.html)
 
-## Features
-
-- Create rich animated scenes using a simple interface
-- Customizable WebGL effects with shader pipelines
-- Frame-by-frame animation control with scrubbing
-- Pan and zoom interaction
-- Export to MP4 or PNG sequence
-
-## Installation
-
-```bash
-npm install mation
-```
+You can also checkout [the example with a code editor](https://jasonjmcghee.github.io/mation). And if you create [a gist with an index.js file](https://gist.github.com/jasonjmcghee/322e44eed193653be33fc72ffafaadd9), you can pass that id as the path, like `/mation/{gistId}`
 
 ## Basic Usage
+
+Install and build using npm.
 
 ### As a module in your JavaScript/TypeScript project
 
@@ -144,13 +134,6 @@ Generator function that defines your animation timeline using the `animate()` me
 ## Examples
 
 See the `examples` directory for more detailed examples:
-
-- `inline-scene.html` - Simple animation with the Scene class
-- `minimal-inline-scene.html` - Bare minimum implementation
-
-## Advanced Usage
-
-For advanced usage including WebGL shader pipelines, custom layers, and rendering options, please see the documentation and examples.
 
 ## License
 
