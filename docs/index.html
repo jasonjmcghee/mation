@@ -132,7 +132,7 @@
   }
 
   // Get Gist ID from URL
-  let gistId = window.location.hash;
+  let gistId = window.location.hash.split("#")[1];
   
   // Fallback to default gistId if none is provided
   if (!gistId || gistId === "") {
